@@ -1,0 +1,42 @@
+const paths = {
+  home: '<rect x="3.5" y="3.5" width="6.5" height="6.5" rx="1.2"/><rect x="14" y="3.5" width="6.5" height="6.5" rx="1.2"/><rect x="3.5" y="14" width="6.5" height="6.5" rx="1.2"/><rect x="14" y="14" width="6.5" height="6.5" rx="1.2"/>',
+  compass: '<circle cx="12" cy="12" r="8.8"/><path d="m15.6 8.4-2 5.2-5.2 2 2-5.2 5.2-2Z"/>',
+  layers: '<path d="m12 3 9 5-9 5-9-5 9-5ZM3 12l9 5 9-5M3 16l9 5 9-5"/>',
+  note: '<path d="M13.5 3.5H6a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-9l-6.5-6Z"/><path d="M13 4v6h6M8 14h8m-8 3h5"/>',
+  trend: '<path d="M4 4v16h16M7.5 15l4-4 3 2.5L20 8m-4 0h4v4"/>',
+  wallet: '<path d="M19 8V6a2 2 0 0 0-2-2H6a2.5 2.5 0 0 0 0 5h13a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H6a2.5 2.5 0 0 1-2.5-2.5V6.5M21 12h-4a2 2 0 1 0 0 4h4"/><path d="M17 14h.1"/>',
+  heart: '<path d="M20.8 8.6c0 4.2-8.8 9.9-8.8 9.9s-8.8-5.7-8.8-9.9A4.6 4.6 0 0 1 12 6.7a4.6 4.6 0 0 1 8.8 1.9Z"/>',
+  settings: '<circle cx="12" cy="12" r="3"/><path d="m9.6 3.5-.6 2.3-1.7 1-2.3-.6-2.4 4.1 1.7 1.7v2l-1.7 1.7L5 19.8l2.3-.6 1.7 1 .6 2.3h4.8l.6-2.3 1.7-1 2.3.6 2.4-4.1-1.7-1.7v-2l1.7-1.7L19 6.2l-2.3.6-1.7-1-.6-2.3Z" transform="translate(0 -.8) scale(1 .98)"/>',
+  search: '<circle cx="10.8" cy="10.8" r="6.3"/><path d="m15.5 15.5 4 4"/>',
+  spark: '<path d="M10 3.5c.5 4.2 2.3 6 6.5 6.5-4.2.5-6 2.3-6.5 6.5-.5-4.2-2.3-6-6.5-6.5 4.2-.5 6-2.3 6.5-6.5ZM18 14v6m-3-3h6M18 4v4m-2-2h4"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  calendar: '<rect x="3.5" y="5.5" width="17" height="15" rx="2"/><path d="M7.5 3.5v4m9-4v4m-13 3h17"/>',
+  right: '<path d="M4 12h15m-6-6 6 6-6 6"/>',
+  arrow: '<path d="M6 18 18 6M8 6h10v10"/>',
+  chevron: '<path d="m9 6 6 6-6 6"/>',
+  down: '<path d="m6 9 6 6 6-6"/>',
+  check: '<path d="m5 12 4.5 4.5L19 7"/>',
+  clock: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2"/>',
+  play: '<path d="m8 5 11 7-11 7V5Z"/>',
+  box: '<path d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3ZM4.4 7.8 12 12l7.6-4.2M12 12v9m-4-15.5 8 4.5"/>',
+  book: '<path d="M12 6c-2.4-2-5.3-2.3-9-1v13c3.7-1.3 6.6-1 9 1 2.4-2 5.3-2.3 9-1V5c-3.7-1.3-6.6-1-9 1Zm0 0v13"/>',
+  edit: '<path d="m14.5 6.5 3 3M4 20l4.2-.8L20 7.5 16.5 4 4.8 15.8 4 20Z"/>',
+  moon: '<path d="M20.5 14A8.6 8.6 0 0 1 10 3.5 8.6 8.6 0 1 0 20.5 14Z"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/>',
+  menu: '<path d="M4 6h16M4 12h16M4 18h16"/>',
+  close: '<path d="m6 6 12 12M6 18 18 6"/>',
+  inbox: '<path d="m7 4-3.5 9v5a2 2 0 0 0 2 2h13a2 2 0 0 0 2-2v-5L17 4H7ZM4 13h4.5l1.5 3h4l1.5-3H20"/>',
+  flag: '<path d="M5 21V4m0 1c4-3 7 3 13 0v9c-6 3-9-3-13 0"/>',
+  list: '<path d="M8 6h12M8 12h12M8 18h12M4 6h.1M4 12h.1M4 18h.1"/>',
+  target: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/>',
+  bolt: '<path d="m13 2-8 12h6l-1 8 9-12h-6l1-8Z"/>',
+  smile: '<circle cx="12" cy="12" r="8.7"/><path d="M8.5 13.5a4 4 0 0 0 7 0M9 9.5h.1m5.8 0h.1"/>',
+  download: '<path d="M12 4v11m-4-4 4 4 4-4M4 16v4h16v-4"/>',
+  trash: '<path d="M4 6h16M9 6V3.5h6V6M6 6l1 14h10l1-14M10 10v6m4-6v6"/>',
+  pin: '<path d="m15 4 5 5-3 1-2 4v3l-3 1-6-6 1-3h3l4-2 1-3ZM9 15l-5 5"/>',
+  link: '<path d="m10 13 4-4m-6.5 6.5-1 1a3.2 3.2 0 0 0 4.5 4.5l4-4a3.2 3.2 0 0 0 0-4.5m1.5-4 1-1A3.2 3.2 0 0 0 13 3l-4 4a3.2 3.2 0 0 0 0 4.5" transform="translate(1 0)"/>'
+};
+
+export function icon(name, size = 20) {
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name] ?? ''}</svg>`;
+}
