@@ -1,0 +1,41 @@
+{
+  "name": "buxu",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "imports": {
+    "#lib/*": "./src/lib/*"
+  },
+  "engines": {
+    "node": ">=24.18.0 <25"
+  },
+  "packageManager": "npm@11.16.0",
+  "scripts": {
+    "dev": "vite dev",
+    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+    "build": "vite build",
+    "start": "node build",
+    "account": "node scripts/account.mjs",
+    "backup": "node scripts/backup.mjs",
+    "migrate": "node scripts/migrate.mjs",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@ai-sdk/deepseek": "3.0.86",
+    "@ai-sdk/openai-compatible": "3.0.92",
+    "ai": "7.0.171",
+    "undici": "7.30.2",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@sveltejs/adapter-node": "6.0.2",
+    "@sveltejs/kit": "3.2.0",
+    "@sveltejs/vite-plugin-svelte": "7.0.0",
+    "@types/node": "24",
+    "svelte": "5.57.3",
+    "svelte-check": "^4.3.0",
+    "typescript": "6.0.3",
+    "vite": "8.3.8",
+    "vitest": "5.1.0"
+  }
+}

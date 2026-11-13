@@ -1015,3 +1015,23 @@ setInterval(() => { if (weatherCoordinates) refreshWeather(); }, 15 * 60 * 1000)
 navigator.permissions?.query({ name: "geolocation" }).then(permission => {
   if (permission.state === "granted") refreshWeather();
 }).catch(() => {});
+
+
+function exportDemoData() {
+  if (!confirm('导出当前 Demo 数据？如果仍在使用初始样例，导出文件也会包含样例。')) return;
+  const options = confirm('是否一并导出外观与语言偏好？');
+  const output = { format: 'buxu-demo', version: 1, data };
+  if (options) output.preferences = { theme: settings.theme, language: settings.language };
+  const url = URL.createObjectURL(new Blob([JSON.stringify(output, null, 2)], { type: 'application/json' }));
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = 'buxu-demo.json';
+  anchor.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+const demoExport = document.createElement('button');
+demoExport.type = 'button';
+demoExport.className = 'button secondary demo-export';
+demoExport.textContent = '导出 Demo 数据';
+demoExport.addEventListener('click', exportDemoData);
+document.body.append(demoExport);

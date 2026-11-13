@@ -398,3 +398,5 @@ dialog footer { display: flex; justify-content: flex-end; gap: 8px; padding: 12p
   .transaction-row .row-actions { gap: 0; }
   .transaction-row .icon-button { width: 32px; }
 }
+
+.demo-export { position: fixed; z-index: 6; bottom: 12px; right: 12px; box-shadow: 0 2px 9px #33275422; }
