@@ -29,11 +29,11 @@ npm run check
 npm test
 npm run build
 python -m pip install playwright==1.61.0
-python -m playwright install chromium
+python -m playwright install chromium webkit
 python tests/e2e/workspace.py
 ```
 
-浏览器测试启动正式构建，使用临时账号和临时数据库，覆盖桌面、手机视口及快照恢复。用 `npm run backup -- <新快照文件路径>` 创建完整性校验后的 SQLite 快照。恢复时暂停写入，将快照以 `buxu.sqlite` 放到新的数据目录，再用对应版本的程序验证数据。
+浏览器测试启动正式构建，使用临时账号和临时数据库，覆盖 Chromium 桌面和手机视口、WebKit 移动端登录及快照恢复。用 `npm run backup -- <新快照文件路径>` 创建完整性校验后的 SQLite 快照。恢复时暂停写入，将快照以 `buxu.sqlite` 放到新的数据目录，再用对应版本的程序验证数据。
 
 仓库提供 `.githooks/pre-commit` 暂存区扫描。安装 Gitleaks 后，在本仓库运行 `git config core.hooksPath .githooks` 启用。CI 也会扫描检出的文件。
 

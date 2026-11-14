@@ -32,8 +32,44 @@ def save(page, fields):
     expect(dialog).to_be_hidden()
 
 
+def verify_mobile_login(playwright, base, password):
+    browser = playwright.webkit.launch()
+    try:
+        context = browser.new_context(**playwright.devices["iPhone 13"])
+        page = context.new_page()
+        delayed = []
+        page.route("**/_app/immutable/entry/start.*.js", lambda route: delayed.append(route), times=1)
+        page.goto(base, wait_until="domcontentloaded")
+        expect(page).to_have_url(base + "/login")
+        username = page.get_by_label("账号")
+        password_field = page.get_by_label("密码")
+        username.fill("workspace-test")
+        password_field.fill("incorrect-password")
+
+        # Keep hydration behind the first edits so the regression does not depend on browser speed.
+        assert delayed, "Login client entry was not intercepted"
+        delayed[0].continue_()
+        page.wait_for_load_state("networkidle")
+        expect(username).to_have_value("workspace-test")
+        expect(password_field).to_have_value("incorrect-password")
+
+        submit = page.get_by_role("button", name="登录", exact=True)
+        submit.tap()
+        expect(page.get_by_role("alert")).to_have_text("账号或密码错误")
+        expect(username).to_have_value("workspace-test")
+        password_field.fill(password)
+        with page.expect_request(lambda request: request.method == "POST" and request.url == base + "/login"):
+            submit.tap()
+        expect(page).to_have_url(base + "/")
+        expect(page.get_by_role("heading", name="从一个目标开始")).to_be_visible()
+    finally:
+        browser.close()
+
+
 def run_browser(base, password, import_demo=False):
     with sync_playwright() as playwright:
+        if not import_demo:
+            verify_mobile_login(playwright, base, password)
         browser_options = {}
         if os.environ.get("BUXU_CHROMIUM"):
             browser_options["executable_path"] = os.environ["BUXU_CHROMIUM"]

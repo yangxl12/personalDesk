@@ -36,7 +36,7 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: python -m pip install playwright==1.61.0
-      - run: python -m playwright install --with-deps chromium
+      - run: python -m playwright install --with-deps chromium webkit
       - run: python tests/e2e/workspace.py
   secrets:
     runs-on: ubuntu-latest
