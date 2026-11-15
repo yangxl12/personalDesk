@@ -101,7 +101,7 @@ export function workspaceQueries(db) {
     dashboard: user => transact(db, () => {
       const month = accountMonth(user)
       return {
-        goals: goals(user, { status: 'active', limit: 6 }).items,
+        goals: all(`SELECT ${columns.goal} FROM goals WHERE user_id=? ORDER BY ${done} ASC, updated_at DESC, id DESC`, user),
         hasGoals: Boolean(one('SELECT 1 FROM goals WHERE user_id=? LIMIT 1', user)),
         notes: all(`SELECT ${columns.noteList} FROM notes WHERE user_id=? ORDER BY updated_at DESC, id DESC LIMIT 3`, user),
         month, totals: totals(user, month), savings: savings(user)

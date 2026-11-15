@@ -44,7 +44,7 @@ describe('SQLite transactions', () => {
     expect(change('taskUpdate', task.id, { version: task.version, done: true }, key)).toMatchObject({ replayed: true, revisions: marked.revisions })
     expect(() => change('taskUpdate', task.id, { version: task.version, done: false }, key)).toThrow(expect.objectContaining({ code: 'IDEMPOTENCY_CONFLICT' }))
     expect(queries.goal(user, goal.id)).toMatchObject({ total_tasks: 1, done_tasks: 1 })
-    expect(queries.dashboard(user)).toMatchObject({ goals: [], hasGoals: true })
+    expect(queries.dashboard(user)).toMatchObject({ goals: [{ id: goal.id, total_tasks: 1, done_tasks: 1 }], hasGoals: true })
     expect(() => change('goalDelete', goal.id, { version: before.version, items: 1, tasks: 1 })).toThrow(expect.objectContaining({ status: 409 }))
     expect(() => queries.goal(other, goal.id)).toThrow(expect.objectContaining({ status: 404 }))
     const current = queries.goal(user, goal.id)

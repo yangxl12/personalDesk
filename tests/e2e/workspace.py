@@ -10,17 +10,22 @@ from pathlib import Path
 from urllib.request import urlopen
 
 from playwright.sync_api import sync_playwright, expect
+from mobile_drawer import verify_mobile_drawer
+from dashboard import verify_dashboard
 
 ROOT = Path(__file__).resolve().parents[2]
 
 
-def login(page, base, password, heading="从一个目标开始"):
+def login(page, base, password, heading=None):
     page.goto(base)
     expect(page).to_have_url(base + "/login")
     page.get_by_label("账号").fill("workspace-test")
     page.get_by_label("密码").fill(password)
     page.get_by_role("button", name="登录", exact=True).click()
-    expect(page.get_by_role("heading", name=heading)).to_be_visible()
+    if heading:
+        expect(page.get_by_role("heading", name=heading)).to_be_visible()
+    else:
+        expect(page.get_by_text("还没有目标", exact=True)).to_be_visible()
     page.wait_for_load_state("networkidle")
 
 
@@ -61,7 +66,9 @@ def verify_mobile_login(playwright, base, password):
         with page.expect_request(lambda request: request.method == "POST" and request.url == base + "/login"):
             submit.tap()
         expect(page).to_have_url(base + "/")
-        expect(page.get_by_role("heading", name="从一个目标开始")).to_be_visible()
+        expect(page.get_by_text("还没有目标", exact=True)).to_be_visible()
+        page.wait_for_load_state("networkidle")
+        verify_mobile_drawer(page)
     finally:
         browser.close()
 
@@ -85,6 +92,10 @@ def run_browser(base, password, import_demo=False):
         phone.on("pageerror", lambda error: errors.append(str(error)))
         login(page, base, password)
         login(phone, base, password)
+
+        if not import_demo:
+            verify_mobile_drawer(phone)
+            verify_dashboard(page, phone, base)
 
         if import_demo:
             first_payload = None
@@ -226,7 +237,7 @@ def run_browser(base, password, import_demo=False):
         expect(page.get_by_text("目标进度 100%")).to_be_visible()
         task.uncheck()
         expect(page.get_by_text("目标进度 0%")).to_be_visible()
-        expect(phone.get_by_role("link", name="练习英语", exact=False).first).to_be_visible(timeout=22_000)
+        expect(phone.get_by_role("tab", name="练习英语", exact=True)).to_be_visible(timeout=22_000)
         assert phone.evaluate("document.documentElement.scrollWidth === window.innerWidth")
 
         page.locator("nav").get_by_role("link", name="工作台", exact=True).first.click()
@@ -380,7 +391,7 @@ def run_browser(base, password, import_demo=False):
             page.goto(base)
             page.wait_for_load_state("networkidle")
             page.screenshot(path=output / "desktop.png", full_page=True)
-            login(phone, base, password, heading="All goals complete")
+            login(phone, base, password, heading="练习英语")
             phone.screenshot(path=output / "mobile.png", full_page=True)
         assert not errors, errors
         browser.close()

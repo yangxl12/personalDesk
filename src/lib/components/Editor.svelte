@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { randomId } from '#lib/random-id'
   import { onMount } from 'svelte'
   import { RequestError } from '#lib/client'
   import { useUi, type EditorSpec } from '#lib/ui.svelte'
@@ -27,7 +28,7 @@
       ...(currentVersion === undefined ? {} : { version: currentVersion })
     }
     const fingerprint = JSON.stringify(body)
-    if (attempt?.fingerprint !== fingerprint) attempt = { fingerprint, key: crypto.randomUUID() }
+    if (attempt?.fingerprint !== fingerprint) attempt = { fingerprint, key: randomId() }
     busy = true
     message = ''
     latest = null

@@ -8,6 +8,7 @@
   import Icon from '#lib/components/Icon.svelte'
   import Brand from '#lib/components/Brand.svelte'
   import Editor from '#lib/components/Editor.svelte'
+  import MobileDrawer from '#lib/components/MobileDrawer.svelte'
 
   let { data, children } = $props()
   const ui = provideUi(() => data.preferences, () => data.model)
@@ -40,10 +41,7 @@
   ]
   let current = $derived(pages.find(([href]) => page.url.pathname === href || (href !== '/' && page.url.pathname.startsWith(href + '/'))) ?? pages[0])
   let menu = $state(false)
-  let now = $state<number | null>(null)
-  let clock = $derived(now === null ? '' : new Intl.DateTimeFormat(data.preferences.language, {
-    timeZone: data.preferences.timezone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
-  }).format(now))
+  let sidebarCollapsed = $state(false)
   let revisions: Revisions = {}
   let checking = false
 
@@ -59,16 +57,13 @@
     const resize = () => { mobile = query.matches }
     resize()
     query.addEventListener('change', resize)
-    now = Date.now()
     revisions = { ...data.revisions }
-    const time = setInterval(() => { now = Date.now() }, 1000)
     const sync = setInterval(check, 15_000)
     document.addEventListener('visibilitychange', check)
     window.addEventListener('online', check)
     window.addEventListener('buxu:revisions', localUpdate)
     return () => {
       query.removeEventListener('change', resize)
-      clearInterval(time)
       clearInterval(sync)
       document.removeEventListener('visibilitychange', check)
       window.removeEventListener('online', check)
@@ -100,14 +95,14 @@
     for (const [module, revision] of Object.entries(updated)) revisions[module] = Math.max(revision, revisions[module] ?? 0)
   }
 
-  let menuButton: HTMLButtonElement
+  let menuButton = $state<HTMLButtonElement>()
   async function escape(event: KeyboardEvent) {
     if (event.key !== 'Escape') return
     if (ui.chatOpen && !ui.editor) { closeChat(); return }
     if (!menu) return
     menu = false
     await tick()
-    menuButton.focus()
+    menuButton?.focus()
   }
 </script>
 
@@ -123,29 +118,26 @@
 {/snippet}
 
 <div class="shell">
-  <aside inert={ui.chatOpen && mobile} class="sidebar" aria-label={ui.t('主菜单')}>
+  <aside id="desktop-menu" hidden={sidebarCollapsed} inert={ui.chatOpen && mobile} class="sidebar" aria-label={ui.t('主菜单')}>
     <div class="brand-area"><Brand label={ui.t('步序')} /></div>
     <nav aria-label={ui.t('页面')}>{@render nav()}</nav>
     <div class="sidebar-foot"><span class="avatar" aria-hidden="true">{data.user.username.slice(0, 1).toUpperCase()}</span><div><strong>{data.user.username}</strong><small>{ui.t('我的空间')}</small></div></div>
   </aside>
-  <div class="workspace" inert={ui.chatOpen && mobile}>
+  <div class="workspace" inert={mobile && (ui.chatOpen || menu)}>
     <header class="topbar">
-      <div class="breadcrumbs"><span>{ui.t('我的空间')}</span><Icon name="chevron" size={14} /><strong>{ui.t(current[2])}</strong></div>
-      <div class="mobile-brand">
-        <button bind:this={menuButton} class="button icon-button" type="button" aria-label={ui.t(menu ? '关闭菜单' : '展开菜单')}
-          aria-expanded={menu} aria-controls="mobile-menu" onclick={() => { menu = !menu }}><Icon name={menu ? 'close' : 'menu'} /></button>
-        <Brand label={ui.t('步序')} />
-      </div>
-      <nav id="mobile-menu" class="mobile-menu" aria-label={ui.t('移动端页面')} hidden={!menu}>{@render nav()}</nav>
-      <div class="topbar-tools">
-        <time class="clock-indicator" datetime={clock || undefined}><Icon name="clock" size={16} />{clock}</time>
-        <button bind:this={aiButton} class="button ai-toggle" type="button" aria-label={ui.t('AI 助手')} aria-expanded={ui.chatOpen} onclick={openChat}><Icon name="spark" size={19} /></button>
-        <a class="button icon-button" href="/settings" aria-label={ui.t('设置')}><Icon name="settings" size={18} /></a>
-      </div>
+      <button bind:this={menuButton} class="button icon-button menu-toggle" type="button"
+        aria-label={ui.t((mobile ? menu : !sidebarCollapsed) ? '关闭菜单' : '展开菜单')}
+        aria-expanded={mobile ? menu : !sidebarCollapsed} aria-controls={mobile ? 'mobile-menu' : 'desktop-menu'}
+        onclick={() => { if (mobile) menu = !menu; else sidebarCollapsed = !sidebarCollapsed }}><Icon name="menu" /></button>
+      <button bind:this={aiButton} class="button icon-button ai-toggle" class:active={ui.chatOpen} type="button"
+        aria-label={ui.t('AI 助手')} aria-expanded={ui.chatOpen} onclick={openChat}><Icon name="ai" size={21} /></button>
     </header>
     <main id="main" tabindex="-1">{@render children()}</main>
   </div>
   {#if panel}{@const Panel = panel}<Panel close={closeChat} {mobile} />{/if}
+  <MobileDrawer bind:open={menu} {mobile} disabled={ui.chatOpen || !!ui.editor} trigger={menuButton} username={data.user.username}>
+    {@render nav()}
+  </MobileDrawer>
 </div>
 {#if ui.editor}
   {#key ui.editor}<Editor spec={ui.editor} />{/key}

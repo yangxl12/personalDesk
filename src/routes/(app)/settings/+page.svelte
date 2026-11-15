@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { randomId } from '#lib/random-id'
   import { invalidate } from '$app/navigation'
   import { useUi } from '#lib/ui.svelte'
   import { commit, refreshModules, RequestError } from '#lib/client'
@@ -36,7 +37,7 @@
 
   async function persist(body: Omit<Preferences, 'ai_version'>) {
     const fingerprint = JSON.stringify(body)
-    if (attempt?.fingerprint !== fingerprint) attempt = { fingerprint, key: crypto.randomUUID() }
+    if (attempt?.fingerprint !== fingerprint) attempt = { fingerprint, key: randomId() }
     const response = await commit<Preferences>('PATCH', '/preferences', body, attempt.key)
     if (response.revisions) await refreshModules(response.revisions)
     ui.notify('已保存')

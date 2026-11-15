@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { randomId } from '#lib/random-id'
   import { untrack } from 'svelte'
   import { useUi } from '#lib/ui.svelte'
   import { commit, refreshModules, request, RequestError } from '#lib/client'
@@ -6,9 +7,9 @@
   import { editItem, editTask, remove } from '#lib/editors'
   import Icon from './Icon.svelte'
 
-  let { item }: { item: Item } = $props()
+  let { item, initiallyExpanded = false }: { item: Item; initiallyExpanded?: boolean } = $props()
   const ui = useUi()
-  let expanded = $state(false)
+  let expanded = $state(untrack(() => initiallyExpanded))
   let list = $state<List<Task> | null>(null)
   let failure = $state('')
   let loading = $state(false)
@@ -42,7 +43,7 @@
     failure = ''
     let attempt = attempts.get(task.id)
     if (!attempt || attempt.version !== task.version || attempt.done !== checked) {
-      attempt = { version: task.version, done: checked, key: crypto.randomUUID() }
+      attempt = { version: task.version, done: checked, key: randomId() }
       attempts.set(task.id, attempt)
     }
     try {

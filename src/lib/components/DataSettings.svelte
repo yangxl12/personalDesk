@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { randomId } from '#lib/random-id'
   import { commit, refreshModules, request, RequestError } from '#lib/client'
   import { useUi } from '#lib/ui.svelte'
   import Icon from './Icon.svelte'
@@ -33,7 +34,7 @@
         method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ file: fileText })
       })
       preview = result.data
-      requestKey = crypto.randomUUID()
+      requestKey = randomId()
     } catch (failure) {
       error = ui.error(failure)
       if (failure instanceof RequestError && Array.isArray(failure.fields)) errors = failure.fields

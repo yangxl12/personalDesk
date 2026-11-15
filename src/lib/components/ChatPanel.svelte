@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { randomId } from '#lib/random-id'
   import { onDestroy, tick, untrack } from 'svelte'
   import { invalidate } from '$app/navigation'
   import { page } from '$app/state'
@@ -167,7 +168,7 @@
     let attempt = attempts.get(fingerprint)
     if (!attempt) {
       attempts.clear()
-      attempt = { key: crypto.randomUUID(), messageId: crypto.randomUUID() }
+      attempt = { key: randomId(), messageId: randomId() }
       attempts.set(fingerprint, attempt)
     }
     pending = true
@@ -195,7 +196,7 @@
   async function retry(id: string) {
     if (pending || switchingModel) return
     const modelRef = ui.chatModel.activeRef ?? undefined
-    if (retryAttempt?.id !== id || retryAttempt.modelRef !== modelRef) retryAttempt = { id, modelRef, key: crypto.randomUUID() }
+    if (retryAttempt?.id !== id || retryAttempt.modelRef !== modelRef) retryAttempt = { id, modelRef, key: randomId() }
     pending = true
     error = ''
     try {
@@ -231,7 +232,7 @@
 
   async function cancel(id: string) {
     if (pending) return
-    if (cancelAttempt?.id !== id) cancelAttempt = { id, key: crypto.randomUUID() }
+    if (cancelAttempt?.id !== id) cancelAttempt = { id, key: randomId() }
     pending = true
     try {
       await commit('POST', '/ai/runs/' + id + '/cancel', {}, cancelAttempt.key)

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { randomId } from '#lib/random-id'
   import { useUi } from '#lib/ui.svelte'
   import { commit, refreshModules, request } from '#lib/client'
   import type { Proposal } from '#lib/contracts/ai'
@@ -25,7 +26,7 @@
 
   async function decide(decision: 'approve' | 'reject') {
     if (busy) return
-    if (attempt?.decision !== decision) attempt = { decision, key: crypto.randomUUID() }
+    if (attempt?.decision !== decision) attempt = { decision, key: randomId() }
     busy = true
     error = ''
     try {
