@@ -1,10 +1,11 @@
 import { fail, redirect } from '@sveltejs/kit'
 import type { Actions, PageServerLoad } from './$types'
 import { signIn } from '#lib/server/auth/session'
-import { DatabaseError } from '#lib/server/db'
+import { database, DatabaseError } from '#lib/server/db'
 
-export const load: PageServerLoad = ({ locals }) => {
+export const load: PageServerLoad = async ({ locals }) => {
   if (locals.user) redirect(303, '/')
+  return { hasAccount: await database('hasAccount') }
 }
 
 export const actions: Actions = {

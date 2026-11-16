@@ -1,7 +1,7 @@
 <script lang="ts">
   import { enhance } from '$app/forms'
   import Brand from '#lib/components/Brand.svelte'
-  let { form } = $props()
+  let { form, data } = $props()
   let pending = $state(false)
 </script>
 
@@ -21,5 +21,8 @@
       {#if form?.message}<p class="form-error" role="alert">{form.message}</p>{/if}
       <button class="button primary" type="submit" disabled={pending}>{pending ? '登录中…' : '登录'}</button>
     </form>
+    {#if !data.hasAccount}
+      <p class="login-alt">还没有账号？<a class="text-link" href="/register">创建账号</a></p>
+    {/if}
   </section>
 </main>

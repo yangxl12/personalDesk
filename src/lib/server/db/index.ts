@@ -12,6 +12,8 @@ type AiGoal = { id: string; title: string; description: string; done: number; to
 type Account = { id: string; username: string }
 type Methods = {
   ready: [[], true]
+  hasAccount: [[], boolean]
+  register: [[string, string], Account | null]
   loginAttempt: [[string, string], { limited: boolean; user?: Account & { password_hash: string } }]
   createSession: [[string, string, string], boolean]
   session: [[string], Account | null]

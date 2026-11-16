@@ -1,11 +1,12 @@
 import { createHash, randomBytes } from 'node:crypto'
 import type { RequestEvent } from '@sveltejs/kit'
 import { database, DatabaseError } from '#lib/server/db'
-import { checkPassword } from './password.mjs'
+import { checkPassword, hashPassword } from './password.mjs'
 
 const absolute = 30 * 86_400
 const hash = (token: string) => createHash('sha256').update(token).digest('hex')
 const cookieName = (secure: boolean) => secure ? '__Host-buxu_session' : 'buxu_session'
+const validName = /^[a-z0-9_.-]{1,64}$/
 
 export async function identify(event: RequestEvent) {
   const token = event.cookies.get(cookieName(event.url.protocol === 'https:'))
@@ -17,9 +18,37 @@ export async function identify(event: RequestEvent) {
   if (event.locals.user) event.locals.sessionHash = digest
 }
 
+async function establish(event: RequestEvent, user: { id: string; username: string }, passwordHash: string) {
+  const token = randomBytes(32).toString('base64url')
+  if (!await database('createSession', user.id, passwordHash, hash(token))) {
+    throw new DatabaseError(401, 'LOGIN_FAILED', '账号或密码已更新，请重新登录')
+  }
+  if (event.locals.sessionHash) await database('revoke', event.locals.sessionHash)
+  const secure = event.url.protocol === 'https:'
+  event.cookies.set(cookieName(secure), token, { path: '/', secure, httpOnly: true, sameSite: 'lax', maxAge: absolute })
+  return { id: user.id, username: user.username }
+}
+
+export async function createAccount(event: RequestEvent, rawName: unknown, password: unknown, confirmation: unknown) {
+  const username = typeof rawName === 'string' ? rawName.trim().toLowerCase() : ''
+  if (!validName.test(username)) {
+    throw new DatabaseError(422, 'INVALID_ACCOUNT', '账号只能使用英文字母、数字、下划线、点和短横线，最多 64 个字符')
+  }
+  if (typeof password !== 'string' || [...password].length < 12 || Buffer.byteLength(password) > 512) {
+    throw new DatabaseError(422, 'INVALID_PASSWORD', '密码至少 12 个字符，最多 512 字节')
+  }
+  if (password !== confirmation) {
+    throw new DatabaseError(422, 'PASSWORD_MISMATCH', '两次输入的密码不一致')
+  }
+  const passwordHash = await hashPassword(password)
+  const user = await database('register', username, passwordHash)
+  if (!user) throw new DatabaseError(409, 'ACCOUNT_EXISTS', '账号已存在，请直接登录')
+  return establish(event, user, passwordHash)
+}
+
 export async function signIn(event: RequestEvent, rawName: unknown, password: unknown) {
   const username = typeof rawName === 'string' ? rawName.trim().toLowerCase() : ''
-  if (!/^[a-z0-9_.-]{1,64}$/.test(username) || typeof password !== 'string' ||
+  if (!validName.test(username) || typeof password !== 'string' ||
     !password || Buffer.byteLength(password) > 512) {
     throw new DatabaseError(422, 'INVALID_LOGIN', '请填写有效的账号和密码')
   }
@@ -27,14 +56,7 @@ export async function signIn(event: RequestEvent, rawName: unknown, password: un
   if (limited) throw new DatabaseError(429, 'LOGIN_LIMIT', '尝试次数过多，请稍后再登录')
   const valid = await checkPassword(password, user?.password_hash)
   if (!user || !valid) throw new DatabaseError(401, 'LOGIN_FAILED', '账号或密码错误')
-  const token = randomBytes(32).toString('base64url')
-  if (!await database('createSession', user.id, user.password_hash, hash(token))) {
-    throw new DatabaseError(401, 'LOGIN_FAILED', '账号或密码已更新，请重新登录')
-  }
-  if (event.locals.sessionHash) await database('revoke', event.locals.sessionHash)
-  const secure = event.url.protocol === 'https:'
-  event.cookies.set(cookieName(secure), token, { path: '/', secure, httpOnly: true, sameSite: 'lax', maxAge: absolute })
-  return { id: user.id, username: user.username }
+  return establish(event, user, user.password_hash)
 }
 
 export async function signOut(event: RequestEvent) {

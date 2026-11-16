@@ -1,9 +1,23 @@
+import { randomUUID } from 'node:crypto'
 import { transact } from './storage.mjs'
 
 const day = 86_400_000
 
 export function authQueries(db) {
   return {
+    hasAccount() {
+      return !!db.prepare('SELECT 1 AS found FROM users LIMIT 1').get()
+    },
+    register(username, passwordHash) {
+      return transact(db, () => {
+        if (db.prepare('SELECT 1 AS found FROM users LIMIT 1').get()) return null
+        const id = randomUUID()
+        db.prepare('INSERT INTO users VALUES (?, ?, ?)').run(id, username, passwordHash)
+        db.prepare('INSERT INTO preferences (user_id) VALUES (?)').run(id)
+        db.prepare('INSERT INTO savings (user_id) VALUES (?)').run(id)
+        return { id, username }
+      })
+    },
     loginAttempt(username, address) {
       return transact(db, () => {
         const now = Date.now()

@@ -397,11 +397,14 @@ dialog footer { display: flex; justify-content: flex-end; gap: 8px; padding: 12p
 [data-theme="system"] .amber { --tone: #f6be82; --tone-soft: #462f25; }
 }
 
-.login-page { min-height: 100dvh; display: grid; place-items: center; padding: 20px; background: radial-gradient(ellipse at 70% 10%, var(--primary-soft), transparent 58%), var(--base); }
+.login-page { min-height: 100dvh; display: grid; align-content: center; justify-items: center; padding: 20px; background: radial-gradient(ellipse at 70% 10%, var(--primary-soft), transparent 58%), var(--base); }
 .login-card { width: min(100%, 420px); padding: clamp(24px, 5vw, 36px); box-shadow: 0 18px 60px #35226d16; }
 .login-card h1 { margin: 24px 0 16px; }
 .login-card form { display: grid; gap: 16px; }
 .login-card > .button { margin-top: 18px; }
+.login-intro { margin: -4px 0 18px; color: var(--muted); font-size: 13px; line-height: 1.65; }
+.login-alt { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); display: flex; justify-content: center; align-items: center; gap: 6px; color: var(--muted); font-size: 13px; }
+.login-alt .text-link { min-height: 0; }
 .pagination { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
 .filters { display: flex; gap: 8px; margin-bottom: 16px; }
 .line-clamp { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
