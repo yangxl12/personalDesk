@@ -126,26 +126,22 @@ h2 { font-size: 17px; font-weight: 750; }
 .direction-tabs { display: flex; flex: 1; gap: 6px; min-width: 0; overflow-x: auto; padding: 4px 2px 8px; scrollbar-width: thin; }
 .direction-tab {
   display: inline-flex; align-items: center; flex: none; gap: 6px; max-width: min(300px, 70vw);
-  min-height: 42px; padding: 6px 14px 6px 5px; border: 1px solid transparent; border-radius: 9px;
+  min-height: 42px; padding: 6px 14px; border: 1px solid transparent; border-radius: 9px;
   background: transparent; color: var(--muted); font-weight: 650; user-select: none;
 }
 .direction-tab:hover { background: var(--soft); color: var(--ink); }
 .direction-tab[aria-selected="true"] { background: var(--primary-soft); color: var(--primary); }
-.direction-tab.dragging { border-color: var(--primary); background: var(--primary-tint); box-shadow: 0 3px 12px #5539c91a; cursor: grabbing; }
-.direction-grip { display: grid; place-items: center; align-self: stretch; width: 26px; flex: none; color: var(--muted); cursor: grab; touch-action: none; }
-.dragging .direction-grip { cursor: grabbing; }
-.direction-grip svg { stroke-width: 3; }
 .direction-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.goal-workspace { padding-top: 24px; }
-.goal-workspace-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.goal-workspace { padding-top: 20px; }
+.goal-workspace-head { margin-bottom: 16px; }
 .goal-workspace-title { min-width: 0; }
-.goal-workspace-title h1 { font-size: clamp(23px, 2.3vw, 30px); letter-spacing: -.025em; }
+.goal-workspace-title h1 { font-size: clamp(21px, 2vw, 25px); letter-spacing: -.025em; }
 .goal-workspace-title p { color: var(--muted); line-height: 1.65; margin-top: 8px; white-space: pre-wrap; overflow-wrap: anywhere; }
-.goal-workspace-progress { display: flex; align-items: center; gap: 12px; margin: 18px 0 22px; }
-.goal-workspace-progress progress { flex: 1; max-width: 260px; }
-.goal-workspace-progress small { font-size: 12px; }
-.goal-workspace-progress strong { font-size: 12px; color: var(--tone); }
-.goal-workspace .item-list { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+.goal-workspace .item-list { gap: 0; }
+.item-summary { min-width: 0; padding: 14px 0; border-top: 1px solid var(--border); }
+.item-summary:last-child { padding-bottom: 0; }
+.item-summary > header { margin-bottom: 4px; }
+.item-summary .task-list { margin: 0; }
 .dashboard-grid > .notes-card { grid-column: auto; }
 .dashboard-grid > .notes-card .note-grid { grid-template-columns: 1fr; }
 .card { background: var(--paper); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; min-width: 0; }
@@ -194,7 +190,6 @@ progress::-moz-progress-bar { background: var(--tone, var(--primary)); border-ra
 .savings-amount span { font-size: 12px; color: var(--muted); }
 .savings-caption { display: flex; justify-content: space-between; margin-top: 5px; color: var(--muted); font-size: 11px; }
 .savings-caption b { color: var(--primary); }
-.log-button { margin-top: 10px; width: 100%; }
 .notes-card { grid-column: 1 / -1; }
 .note-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 .note-card { display: flex; flex-direction: column; gap: 7px; min-width: 0; padding: 13px 14px; background: var(--inset); border: 1px solid var(--border); border-radius: 11px; transition: border-color .15s, background-color .15s; }
@@ -237,6 +232,10 @@ progress::-moz-progress-bar { background: var(--tone, var(--primary)); border-ra
 .task-row label { flex: 1; display: flex; gap: 10px; align-items: center; cursor: pointer; padding: 7px 0; overflow-wrap: anywhere; }
 .task-row input { flex: none; width: 18px; height: 18px; margin: 0; accent-color: var(--primary); }
 .task-row label.done span { text-decoration: line-through; color: var(--muted); }
+.task-summary { display: flex; flex: 1; align-items: center; gap: 10px; padding: 7px 0; overflow-wrap: anywhere; }
+.task-status { display: flex; flex: none; color: var(--muted); }
+.task-summary.done > span:last-child { text-decoration: line-through; color: var(--muted); }
+.task-summary.done .task-status { color: var(--positive); }
 .notes-collection .note-card { background: var(--paper); min-height: 133px; padding: 18px; }
 .note-body { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.85; min-height: 180px; font-size: 15px; }
 .finance-grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; }
@@ -328,14 +327,9 @@ dialog footer { display: flex; justify-content: flex-end; gap: 8px; padding: 12p
 
 @container (max-width: 760px) {
   .dashboard-grid, .finance-grid, .settings-grid { grid-template-columns: 1fr; }
-  .goal-workspace .item-list { grid-template-columns: 1fr; }
   .stat strong { font-size: clamp(14px, 3cqi, 20px); }
 }
 @container (max-width: 515px) {
-  .goal-workspace-head { flex-wrap: wrap; gap: 12px; }
-  .goal-workspace-head > .row-actions { margin-left: auto; }
-  .goal-workspace-progress { flex-wrap: wrap; gap: 8px; }
-  .goal-workspace-progress progress { flex-basis: 100%; max-width: none; }
   .note-grid { grid-template-columns: 1fr; gap: 8px; }
   .page-head { flex-direction: column; align-items: flex-start; gap: 11px; }
   .card { padding: 15px; }

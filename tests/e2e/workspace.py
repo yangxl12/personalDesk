@@ -223,6 +223,7 @@ def run_browser(base, password, import_demo=False):
         panel.get_by_role("button", name="关闭 AI 助手").click()
         phone.goto(base)
 
+        page.get_by_role("navigation", name="页面").get_by_role("link", name="目标管理", exact=True).click()
         page.get_by_role("button", name="新建目标").click()
         save(page, {"目标名称": "练习英语", "目标说明": "每周录音一次"})
         expect(page.get_by_role("heading", name="练习英语")).to_be_visible()
@@ -241,6 +242,7 @@ def run_browser(base, password, import_demo=False):
         assert phone.evaluate("document.documentElement.scrollWidth === window.innerWidth")
 
         page.locator("nav").get_by_role("link", name="工作台", exact=True).first.click()
+        page.get_by_role("link", name="全部记录", exact=True).click()
         page.get_by_role("button", name="新建思考").click()
         save(page, {"正文": "从三分钟的练习开始"})
         expect(page.get_by_role("heading", name="从三分钟的练习开始")).to_be_visible()

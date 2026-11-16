@@ -1,6 +1,5 @@
 <script lang="ts">
   import { useUi } from '#lib/ui.svelte'
-  import { editNote, editTransaction } from '#lib/editors'
   import Icon from '#lib/components/Icon.svelte'
   import Empty from '#lib/components/Empty.svelte'
   import Savings from '#lib/components/Savings.svelte'
@@ -21,16 +20,13 @@
       <a class="text-link" href="/finance">{ui.t('财务详情')}<Icon name="arrow" size={15} /></a>
     </header>
     <FinanceStats totals={dashboard.totals} compact />
-    <Savings savings={dashboard.savings} />
-    <button class="button secondary log-button" type="button" onclick={() => editTransaction(ui)}><Icon name="plus" size={17} />{ui.t('记一笔')}</button>
+    <Savings savings={dashboard.savings} readonly />
   </section>
 
   <section class="card notes-card">
     <header class="section-head">
       <h2><span class="section-icon"><Icon name="notes" /></span>{ui.t('思考记录')}</h2>
-      <div class="section-actions">
-        <button class="button quiet" type="button" onclick={() => editNote(ui)}><Icon name="plus" size={17} />{ui.t('新建思考')}</button>
-      </div>
+      <a class="text-link" href="/notes">{ui.t('全部记录')}<Icon name="arrow" size={15} /></a>
     </header>
     {#if dashboard.notes.length}
       <div class="note-grid">{#each dashboard.notes as note (note.id)}<NoteCard {note} />{/each}</div>

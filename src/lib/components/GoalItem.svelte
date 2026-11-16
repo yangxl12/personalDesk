@@ -7,7 +7,7 @@
   import { editItem, editTask, remove } from '#lib/editors'
   import Icon from './Icon.svelte'
 
-  let { item, initiallyExpanded = false }: { item: Item; initiallyExpanded?: boolean } = $props()
+  let { item, initiallyExpanded = false, readonly = false }: { item: Item; initiallyExpanded?: boolean; readonly?: boolean } = $props()
   const ui = useUi()
   let expanded = $state(untrack(() => initiallyExpanded))
   let list = $state<List<Task> | null>(null)
@@ -19,7 +19,7 @@
 
   $effect(() => {
     const version = item.version
-    if (expanded) untrack(() => { void load('', version) })
+    if (readonly || expanded) untrack(() => { void load('', version) })
   })
 
   async function load(cursor = '', expectedVersion = item.version) {
@@ -38,7 +38,7 @@
   }
 
   async function toggle(task: Task, checked: boolean) {
-    if (busy) return
+    if (readonly || busy) return
     busy = { id: task.id, done: checked }
     failure = ''
     let attempt = attempts.get(task.id)
@@ -63,22 +63,28 @@
   }
 </script>
 
-<section class="card item-card">
+<section class="item-card" class:card={!readonly} class:item-summary={readonly}>
   <header>
     <div>
       <h3>{item.title}</h3>
-      <small>{item.total_tasks ? ui.t('已完成 {done}/{total} 项任务', { done: item.done_tasks, total: item.total_tasks }) : ui.t('暂无任务')}</small>
+      {#if !readonly}
+        <small>{item.total_tasks ? ui.t('已完成 {done}/{total} 项任务', { done: item.done_tasks, total: item.total_tasks }) : ui.t('暂无任务')}</small>
+      {/if}
     </div>
-    <div class="row-actions">
-      <button type="button" class="button icon-button" aria-label={ui.t('编辑事项')} onclick={() => editItem(ui, item.goal_id, item)}><Icon name="edit" size={17} /></button>
-      <button type="button" class="button icon-button" aria-label={ui.t('删除事项')} onclick={() => remove(ui, '/items/' + item.id,
-        { version: item.version, tasks: item.total_tasks }, ui.t('删除「{title}」及其 {tasks} 个任务？', { title: item.title, tasks: item.total_tasks }))}><Icon name="trash" size={17} /></button>
-    </div>
+    {#if !readonly}
+      <div class="row-actions">
+        <button type="button" class="button icon-button" aria-label={ui.t('编辑事项')} onclick={() => editItem(ui, item.goal_id, item)}><Icon name="edit" size={17} /></button>
+        <button type="button" class="button icon-button" aria-label={ui.t('删除事项')} onclick={() => remove(ui, '/items/' + item.id,
+          { version: item.version, tasks: item.total_tasks }, ui.t('删除「{title}」及其 {tasks} 个任务？', { title: item.title, tasks: item.total_tasks }))}><Icon name="trash" size={17} /></button>
+      </div>
+    {/if}
   </header>
-  <progress value={progress(item)} max="100" aria-label={item.title}></progress>
-  <button type="button" class="button task-toggle" aria-expanded={expanded} aria-controls={'tasks-' + item.id}
-    onclick={() => { expanded = !expanded }}><Icon name={expanded ? 'down' : 'chevron'} size={15} />{ui.t(expanded ? '收起任务' : '展开任务')}</button>
-  <div id={'tasks-' + item.id} hidden={!expanded}>
+  {#if !readonly}
+    <progress value={progress(item)} max="100" aria-label={item.title}></progress>
+    <button type="button" class="button task-toggle" aria-expanded={expanded} aria-controls={'tasks-' + item.id}
+      onclick={() => { expanded = !expanded }}><Icon name={expanded ? 'down' : 'chevron'} size={15} />{ui.t(expanded ? '收起任务' : '展开任务')}</button>
+  {/if}
+  <div id={'tasks-' + item.id} hidden={!readonly && !expanded}>
     {#if failure}
       <p class="form-error" role="alert">{failure}</p>
       <button class="button secondary" type="button" onclick={() => load()}>{ui.t('刷新任务')}</button>
@@ -89,22 +95,32 @@
         {#each list.items as task (task.id)}
           {@const checked = busy?.id === task.id ? busy.done : !!task.done}
           <div class="task-row">
-            <label class:done={checked}>
-              <input type="checkbox" checked={checked} disabled={busy !== null} onchange={event => void toggle(task, event.currentTarget.checked)}>
-              <span>{task.title}</span>
-            </label>
-            <div class="row-actions">
-              <button type="button" class="button icon-button" aria-label={ui.t('编辑任务')} onclick={() => editTask(ui, item.id, load, task)}><Icon name="edit" size={17} /></button>
-              <button type="button" class="button icon-button" aria-label={ui.t('删除任务')} onclick={() => remove(ui, '/tasks/' + task.id,
-                { version: task.version }, ui.t('删除「{title}」？', { title: task.title }), undefined, load)}><Icon name="trash" size={17} /></button>
-            </div>
+            {#if readonly}
+              <div class="task-summary" class:done={checked}>
+                <span class="task-status" role="img" aria-label={ui.t(checked ? '已完成' : '待完成')}><Icon name={checked ? 'check' : 'clock'} size={17} /></span>
+                <span>{task.title}</span>
+              </div>
+            {:else}
+              <label class:done={checked}>
+                <input type="checkbox" checked={checked} disabled={busy !== null} onchange={event => void toggle(task, event.currentTarget.checked)}>
+                <span>{task.title}</span>
+              </label>
+              <div class="row-actions">
+                <button type="button" class="button icon-button" aria-label={ui.t('编辑任务')} onclick={() => editTask(ui, item.id, load, task)}><Icon name="edit" size={17} /></button>
+                <button type="button" class="button icon-button" aria-label={ui.t('删除任务')} onclick={() => remove(ui, '/tasks/' + task.id,
+                  { version: task.version }, ui.t('删除「{title}」？', { title: task.title }), undefined, load)}><Icon name="trash" size={17} /></button>
+              </div>
+            {/if}
           </div>
         {/each}
       </div>
+      {#if readonly && !list.items.length}<p class="muted">{ui.t('暂无任务')}</p>{/if}
       {#if list.nextCursor}
         <button type="button" class="button secondary" disabled={loading} onclick={() => load(list?.nextCursor ?? '')}>{ui.t('加载更多')}</button>
       {/if}
     {/if}
-    <button type="button" class="button quiet" onclick={() => editTask(ui, item.id, load)}><Icon name="plus" size={16} />{ui.t('新建任务')}</button>
+    {#if !readonly}
+      <button type="button" class="button quiet" onclick={() => editTask(ui, item.id, load)}><Icon name="plus" size={16} />{ui.t('新建任务')}</button>
+    {/if}
   </div>
 </section>
