@@ -48,7 +48,7 @@ def verify_dashboard(page, phone, base):
     third = cards.nth(2).bounding_box()
     assert abs((board["x"] + board["width"]) - third["x"] - 36) < 1
 
-    # Checking a task is a local visual toggle: no request leaves the page.
+    # Checking a task writes through to the server, marks the row done and survives a reload.
     first = page.locator(".goal-board-card", has_text="方向 1")
     row = first.locator(".check-row")
     expect(row).to_have_text("完成一次练习")
@@ -58,18 +58,32 @@ def verify_dashboard(page, phone, base):
 
     def observe(request):
         if "/api/v1/" in request.url and request.method not in ("GET", "HEAD"):
-            writes.append(request.url)
+            writes.append((request.method, request.url))
+
+    def task_write(request):
+        return request.method == "PATCH" and "/api/v1/tasks/" in request.url
 
     page.on("request", observe)
-    checkbox.check()
+    with page.expect_request(task_write):
+        checkbox.check()
     expect(checkbox).to_be_checked()
     expect(row.locator("label")).to_have_class(re.compile(r"\bdone\b"))
-    checkbox.uncheck()
+    expect(row.locator("span").first).to_have_css("text-decoration-line", "line-through")
+    page.wait_for_timeout(500)
+    page.remove_listener("request", observe)
+    assert writes and all(method == "PATCH" for method, _ in writes), writes
+
+    page.reload()
+    page.wait_for_load_state("networkidle")
+    first = page.locator(".goal-board-card", has_text="方向 1")
+    row = first.locator(".check-row")
+    checkbox = first.get_by_role("checkbox")
+    expect(checkbox).to_be_checked()
+    with page.expect_request(task_write):
+        checkbox.uncheck()
     expect(checkbox).not_to_be_checked()
     expect(row.locator("label")).not_to_have_class(re.compile(r"\bdone\b"))
-    page.wait_for_timeout(300)
-    page.remove_listener("request", observe)
-    assert not writes, writes
+    page.wait_for_timeout(500)
 
     # The goal editor renames the goal, deletes selected tasks and deletes the goal itself.
     second = page.locator(".goal-board-card", has_text="方向 2")
@@ -148,6 +162,29 @@ def verify_dashboard(page, phone, base):
     assert abs((card["x"] + card["width"]) - (finance["x"] + finance["width"])) < 1
     second = phone.locator(".goal-board-card").nth(1).bounding_box()
     assert abs(phone.evaluate("innerWidth") - second["x"] - 7) < 1
+
+    # Swiping on a goal card belongs to the rail: it never opens the drawer, and a left
+    # swipe starting inside the drawer band still scrolls to the next card.
+    drawer = phone.locator("#mobile-menu")
+    expect(drawer).to_have_attribute("aria-hidden", "true")
+    client = phone.context.new_cdp_session(phone)
+    swipe_y = card["y"] + 60
+    swipe_x = card["x"] + 80
+
+    def swipe(dx):
+        client.send("Input.dispatchTouchEvent", {"type": "touchStart", "touchPoints": [{"x": swipe_x, "y": swipe_y, "id": 1}]})
+        for step in range(1, 9):
+            client.send("Input.dispatchTouchEvent", {"type": "touchMove", "touchPoints": [{"x": swipe_x + dx * step / 8, "y": swipe_y, "id": 1}]})
+        client.send("Input.dispatchTouchEvent", {"type": "touchEnd", "touchPoints": []})
+        phone.wait_for_timeout(400)
+
+    rail = phone.locator(".goal-board")
+    swipe(120)
+    expect(drawer).to_have_attribute("aria-hidden", "true")
+    assert rail.evaluate("el => el.scrollLeft") == 0
+    swipe(-300)
+    expect(drawer).to_have_attribute("aria-hidden", "true")
+    assert rail.evaluate("el => el.scrollLeft") > 0
     phone.evaluate("""() => {
       const rail = document.querySelector('.goal-board')
       rail.scrollTo({ left: rail.scrollWidth, behavior: 'instant' })

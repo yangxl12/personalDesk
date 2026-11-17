@@ -12,7 +12,7 @@
 </script>
 
 {#if goals.length}
-  <section class="goal-board" aria-label={ui.t('目标管理')}>
+  <section class="goal-board" aria-label={ui.t('目标管理')} data-own-swipe>
     {#each goals as goal (goal.id)}
       <article class="card goal-board-card goal-slide" id={'goal-' + goal.id}>
         <header class="goal-card-head">

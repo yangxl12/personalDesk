@@ -83,8 +83,9 @@
         touch.clientY > viewportHeight - systemBottom || (window.visualViewport?.scale ?? 1) > 1.01) return
       // A right swipe beginning 64–112 CSS pixels from the left opens the drawer.
       // Gestures that start at either screen edge always belong to the browser/OS.
+      // Horizontal rails (goal cards) and form controls keep their own gestures.
       if (!open && (touch.clientX > systemEdge + openingBand ||
-        target?.closest('input, textarea, select, [contenteditable="true"], [role="slider"], [data-sort-handle]'))) return
+        target?.closest('input, textarea, select, [contenteditable="true"], [role="slider"], [data-sort-handle], [data-own-swipe]'))) return
       const width = drawer.getBoundingClientRect().width
       const translate = new DOMMatrixReadOnly(getComputedStyle(drawer).transform).m41
       const visible = Math.max(0, Math.min(1, 1 + translate / width))
