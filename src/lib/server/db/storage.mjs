@@ -24,9 +24,12 @@ export function openDatabase() {
   const db = new DatabaseSync(databaseFile)
   try {
     const version = String(db.prepare('SELECT sqlite_version() AS version').get().version)
-    const [major, minor, patch] = version.split('.').map(Number)
-    if (major !== 3 || minor < 51 || (minor === 51 && patch < 3) || minor === 52) {
-      throw new Error('Unsupported SQLite version: ' + version)
+    const [major, minor] = version.split('.').map(Number)
+    // 只挡真正跑不动的情况：STRICT 表需要 3.37（2021-12）。其余一律放行，
+    // 不按 Node 大版本或补丁号设卡——node:sqlite 的 SQLite 版本随 Node 走，
+    // 卡补丁号只会让能跑的 runtime 被误伤。
+    if (major < 3 || (major === 3 && minor < 37)) {
+      throw new Error(`SQLite ${version} is too old: 3.37+ required for STRICT tables. Use a newer Node.`)
     }
     db.exec('PRAGMA busy_timeout=5000; PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL;')
     transact(db, () => {

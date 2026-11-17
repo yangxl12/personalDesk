@@ -4,7 +4,7 @@
 
 ## 本地运行
 
-使用 Node.js 24.18.0 和 npm 11.16.0。
+使用 Node.js 22.17 及以上（含 24.x），npm 11。SQLite 走 Node 内置的 `node:sqlite`，只要求 SQLite 3.37+（STRICT 表下限），不绑定具体 Node 小版本。
 
 ```bash
 npm ci
