@@ -50,7 +50,9 @@ def verify_dashboard(page, phone, base):
     first = page.locator(".goal-board-card", has_text="方向 1")
     expect(first.locator(".check-row")).to_have_text("完成一次练习")
     expect(first.locator(".check-row")).not_to_have_class(re.compile(r"\bdone\b"))
-    first.click()
+    first.locator(".goal-board-title").click()
+    expect(page).to_have_url(base + "/")
+    first.locator(".goal-board-go").click()
     expect(page).to_have_url(goal_url)
     expect(page.get_by_role("heading", name="方向 1", exact=True)).to_be_visible()
     expect(page.get_by_text("完成一次练习", exact=True)).to_be_visible()
@@ -60,7 +62,7 @@ def verify_dashboard(page, phone, base):
     expect(page).to_have_url(base + "/")
     readonly(page)
 
-    page.locator(".goal-board-card", has_text="方向 2").click()
+    page.locator(".goal-board-card", has_text="方向 2").locator(".goal-board-go").click()
     expect(page).to_have_url(base + "/goals/" + goals[1]["id"])
     expect(page.get_by_role("heading", name="方向 2", exact=True)).to_be_visible()
     expect(page.get_by_text("暂无任务", exact=True)).to_be_visible()
@@ -70,7 +72,15 @@ def verify_dashboard(page, phone, base):
     expect(phone.locator(".goal-board-card")).to_have_count(8)
     expect(phone.get_by_role("tab")).to_have_count(0)
     readonly(phone)
-    phone.locator(".goal-board-card", has_text="方向 1").tap()
+    # The rail shows one goal per card, flush with the cards below it, spaced at half the page gutter.
+    assert phone.evaluate("getComputedStyle(document.querySelector('.goal-board')).columnGap") == "7px"
+    card = phone.locator(".goal-board-card").first.bounding_box()
+    finance = phone.locator(".finance-card").bounding_box()
+    assert abs(card["x"] - finance["x"]) < 1
+    assert abs((card["x"] + card["width"]) - (finance["x"] + finance["width"])) < 1
+    phone.locator(".goal-board-card", has_text="方向 1").locator(".goal-board-title").tap()
+    expect(phone).to_have_url(base + "/")
+    phone.locator(".goal-board-card", has_text="方向 1").locator(".goal-board-go").tap()
     expect(phone).to_have_url(goal_url)
     phone.goto(base)
     assert phone.evaluate("document.documentElement.scrollWidth === innerWidth")
@@ -115,7 +125,7 @@ def verify_dashboard(page, phone, base):
     expect(page.get_by_role("button", name="编辑", exact=True)).to_be_visible()
     phone.goto(base)
     phone.wait_for_load_state("networkidle")
-    phone.locator(".goal-board-card", has_text="方向 1").tap()
+    phone.locator(".goal-board-card", has_text="方向 1").locator(".goal-board-go").tap()
     expect(phone).to_have_url(goal_url)
     phone.goto(base)
     readonly(phone)
@@ -136,4 +146,4 @@ def verify_dashboard(page, phone, base):
         view.goto(base)
         expect(view.get_by_text("还没有目标", exact=True)).to_be_visible()
         readonly(view)
-    print("Dashboard: flat goal task cards, read-only summary and dedicated-page editing passed", flush=True)
+    print("Dashboard: goal rail cards, read-only summary and dedicated-page editing passed", flush=True)

@@ -12,14 +12,17 @@
 {#if goals.length}
   <section class="goal-board" aria-label={ui.t('目标管理')}>
     {#each goals as goal (goal.id)}
-      <a class="card goal-board-card" href={'/goals/' + goal.id}>
-        <div class="goal-board-head"><h2>{goal.title}</h2><Icon name="arrow" size={16} /></div>
-        <TaskList tasks={goal.plan.tasks} readonly dense />
-        {#if !goal.plan.tasks.length}<div class="goal-board-empty">{ui.t('暂无任务')}</div>{/if}
-        {#if goal.plan.total > goal.plan.tasks.length}
-          <div class="goal-board-more">{ui.t('还有 {count} 项任务', { count: goal.plan.total - goal.plan.tasks.length })}</div>
-        {/if}
-      </a>
+      <article class="card goal-board-card goal-slide">
+        <h2 class="goal-board-title">{goal.title}</h2>
+        <div class="goal-board-body">
+          <TaskList tasks={goal.plan.tasks} readonly dense />
+          {#if !goal.plan.tasks.length}<div class="goal-board-empty">{ui.t('暂无任务')}</div>{/if}
+          {#if goal.plan.total > goal.plan.tasks.length}
+            <div class="goal-board-more">{ui.t('还有 {count} 项任务', { count: goal.plan.total - goal.plan.tasks.length })}</div>
+          {/if}
+        </div>
+        <a class="goal-board-go" href={'/goals/' + goal.id} aria-label={ui.t('查看目标')}><Icon name="chevron" size={18} /></a>
+      </article>
     {/each}
   </section>
 {:else}

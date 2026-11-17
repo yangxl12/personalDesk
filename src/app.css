@@ -96,7 +96,11 @@ h1, h2, h3, p { margin: 0; }
   border-bottom: 1px solid var(--border);
 }
 .topbar .ai-toggle { width: 38px; min-height: 38px; padding: 0; }
-#main { max-width: 1460px; margin-inline: auto; padding: 30px clamp(20px, 3vw, 46px) 40px; outline: none; container-type: inline-size; }
+#main {
+  --gutter: clamp(20px, 3vw, 46px);
+  max-width: 1460px; margin-inline: auto; padding: 30px var(--gutter) 40px;
+  outline: none; container-type: inline-size;
+}
 h1 { font-size: clamp(28px, 2.7vw, 38px); line-height: 1.22; letter-spacing: -.045em; font-weight: 800; overflow-wrap: anywhere; }
 h2 { font-size: 17px; font-weight: 750; }
 .button {
@@ -123,16 +127,26 @@ h2 { font-size: 17px; font-weight: 750; }
 .dashboard-grid { display: grid; grid-template-columns: 1.08fr 1fr; gap: 18px; }
 .dashboard-goals { grid-column: 1 / -1; min-width: 0; }
 .goal-board {
-  grid-column: 1 / -1; display: grid; gap: 18px;
-  grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr));
+  grid-column: 1 / -1; display: flex; gap: calc(var(--gutter) / 2);
+  overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory; scrollbar-width: none; -webkit-overflow-scrolling: touch;
 }
 .goal-board-card { display: flex; flex-direction: column; gap: 2px; padding: 22px 24px 16px; }
-a.goal-board-card { transition: border-color .15s, transform .15s, box-shadow .15s; }
-a.goal-board-card:hover { border-color: #c9bdf2; transform: translateY(-2px); box-shadow: 0 12px 26px #2c21541a; }
-.goal-board-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
-.goal-board-head h2 { font-size: 18px; font-weight: 800; letter-spacing: -.02em; line-height: 1.45; overflow-wrap: anywhere; }
-.goal-board-head svg { margin-top: 6px; color: var(--muted); transition: transform .18s, color .18s; }
-a.goal-board-card:hover .goal-board-head svg { color: var(--primary); transform: translateX(3px); }
+.goal-slide {
+  position: relative; flex: 0 0 100%; height: clamp(230px, 40dvh, 420px);
+  padding: 22px 24px 56px; scroll-snap-align: start;
+  transition: border-color .18s, box-shadow .18s;
+}
+.goal-slide:hover { border-color: #c9bdf2; box-shadow: 0 12px 26px #2c21541a; }
+.goal-board-title { margin-bottom: 8px; font-size: 18px; font-weight: 800; letter-spacing: -.02em; line-height: 1.45; overflow-wrap: anywhere; }
+.goal-board-body { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: thin; }
+.goal-board-go {
+  position: absolute; right: 10px; bottom: 10px; display: grid; place-items: center;
+  width: 40px; height: 40px; border-radius: 8px; color: var(--muted);
+  transition: color .18s, transform .18s;
+}
+.goal-board-go:hover { color: var(--primary); transform: translateX(2px); }
+.goal-board-go:active { transform: scale(.93); }
 .goal-board-empty { padding: 6px 0; color: var(--muted); font-size: 13px; }
 .goal-board-more { align-self: flex-start; margin-top: 4px; color: var(--muted); font-size: 12px; }
 .add-task { align-self: flex-start; margin-top: 8px; padding-left: 0; }
@@ -335,6 +349,10 @@ dialog footer { display: flex; justify-content: flex-end; gap: 8px; padding: 12p
   .section-actions { gap: 7px; }
   .notes-card .section-actions .text-link { display: none; }
 }
+@media (min-width: 761px) {
+  .goal-board { scrollbar-width: thin; scrollbar-color: var(--control-border) transparent; }
+  .goal-slide { flex: 0 0 calc(50% - var(--gutter) / 4); }
+}
 @media (min-width: 761px) and (max-width: 1120px) {
   :root { --sidebar-width: 186px; --panel-width: 310px; }
   .sidebar { padding-inline: 12px; }
@@ -349,11 +367,13 @@ dialog footer { display: flex; justify-content: flex-end; gap: 8px; padding: 12p
 @media (max-width: 760px) {
   .sidebar { display: none; }
   .topbar { min-height: 60px; padding-inline: 13px; }
-  #main { padding: 20px 14px 30px; }
+  #main { --gutter: 14px; padding: 20px var(--gutter) 30px; }
   .dashboard-grid { gap: 12px; }
-  .goal-board { gap: 12px; }
+  .goal-board { gap: calc(var(--gutter) / 2); }
+  .goal-board::-webkit-scrollbar { display: none; }
   .goal-board-card { padding: 18px 18px 12px; }
-  .goal-board-head h2 { font-size: 17px; }
+  .goal-board-card.goal-slide { padding: 18px 18px 54px; }
+  .goal-board-title { font-size: 17px; }
   .button { min-height: 42px; }
   .icon-button { width: 39px; min-height: 42px; }
   .ai-panel { position: fixed; inset: 0; width: 100%; height: 100dvh; border: 0; }
