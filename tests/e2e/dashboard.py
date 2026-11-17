@@ -77,14 +77,15 @@ def verify_dashboard(page, phone, base):
     expect(phone.locator(".goal-board-card")).to_have_count(8)
     expect(phone.get_by_role("tab")).to_have_count(0)
     readonly(phone)
-    # The rail centers one goal card and peeks the neighbours on both sides.
+    # The rail bleeds to the screen edges: the card keeps the same left/right edges as the cards
+    # below, while the neighbours show as a 7px sliver clipped by the screen, not by the content box.
     assert phone.evaluate("getComputedStyle(document.querySelector('.goal-board')).columnGap") == "7px"
-    board = phone.locator(".goal-board").bounding_box()
     card = phone.locator(".goal-board-card").first.bounding_box()
-    assert card["width"] < board["width"] - 40
-    assert abs((card["x"] + card["width"] / 2) - (board["x"] + board["width"] / 2)) < 1
+    finance = phone.locator(".finance-card").bounding_box()
+    assert abs(card["x"] - finance["x"]) < 1
+    assert abs((card["x"] + card["width"]) - (finance["x"] + finance["width"])) < 1
     second = phone.locator(".goal-board-card").nth(1).bounding_box()
-    assert abs((board["x"] + board["width"]) - second["x"] - 22) < 1
+    assert abs(phone.evaluate("innerWidth") - second["x"] - 7) < 1
     phone.evaluate("""() => {
       const rail = document.querySelector('.goal-board')
       const cards = rail.querySelectorAll('.goal-board-card')
@@ -92,7 +93,7 @@ def verify_dashboard(page, phone, base):
     }""")
     phone.wait_for_timeout(400)
     assert abs(phone.locator(".goal-board-card").nth(1).bounding_box()["x"] - card["x"]) < 1
-    assert phone.locator(".goal-board-card").first.bounding_box()["x"] < 0
+    assert abs(phone.locator(".goal-board-card").first.bounding_box()["x"] + card["width"] - 7) < 1
     phone.evaluate("document.querySelector('.goal-board').scrollTo({ left: 0, behavior: 'instant' })")
     phone.wait_for_timeout(300)
     phone.locator(".goal-board-card", has_text="方向 1").locator(".goal-board-title").tap()
