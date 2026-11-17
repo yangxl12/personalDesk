@@ -4,7 +4,6 @@ import { Fault, conflict, missing } from './fault.mjs'
 
 const columns = {
   goal: 'id, title, description, tone, total_tasks, done_tasks, updated_at, version',
-  item: 'id, goal_id, title, total_tasks, done_tasks, created_at, version',
   task: 'id, item_id, title, done, completed_at, created_at, version',
   note: 'id, title, body, summary, created_at, updated_at, version',
   noteList: 'id, title, summary, created_at, updated_at, version',
@@ -14,6 +13,7 @@ const columns = {
 }
 const done = '(total_tasks > 0 AND done_tasks = total_tasks)'
 const summaries = text => [...text.replace(/\s+/gu, ' ')].slice(0, 80).join('')
+const outline = { tasks: 5 }
 
 export function workspaceQueries(db) {
   const one = (sql, ...args) => db.prepare(sql).get(...args)
@@ -60,10 +60,29 @@ export function workspaceQueries(db) {
   }
 
   function goalDetail(user, id) {
+    // Tasks live under the goal's single internal container; the container is never exposed.
     return {
-      ...row('goal', 'goals', user, id),
-      items: one('SELECT COUNT(*) AS total FROM goal_items WHERE user_id=? AND goal_id=?', user, id).total
+      goal: row('goal', 'goals', user, id),
+      tasks: all(`SELECT t.id, t.title, t.done, t.completed_at, t.created_at, t.version FROM tasks t
+        JOIN goal_items i ON t.user_id=i.user_id AND t.item_id=i.id
+        WHERE t.user_id=? AND i.goal_id=? ORDER BY t.done, t.created_at, t.id`, user, id)
     }
+  }
+
+  // Dashboard projection: a flat list of each goal's first few tasks.
+  function dashboardTasks(user) {
+    const rows = all(`SELECT id, goal_id, title, done, version FROM (
+        SELECT t.id, i.goal_id, t.title, t.done, t.version,
+          ROW_NUMBER() OVER (PARTITION BY i.goal_id ORDER BY t.done, t.created_at, t.id) AS position
+        FROM tasks t JOIN goal_items i ON t.user_id=i.user_id AND t.item_id=i.id
+        WHERE t.user_id=?) WHERE position<=? ORDER BY goal_id, position`, user, outline.tasks)
+    const byGoal = new Map()
+    for (const { id, goal_id, title, done, version } of rows) {
+      const list = byGoal.get(goal_id)
+      if (list) list.push({ id, title, done, version })
+      else byGoal.set(goal_id, [{ id, title, done, version }])
+    }
+    return byGoal
   }
 
   function goals(user, options) {
@@ -100,26 +119,19 @@ export function workspaceQueries(db) {
     savings,
     dashboard: user => transact(db, () => {
       const month = accountMonth(user)
+      const tasks = dashboardTasks(user)
+      const goals = all(`SELECT ${columns.goal} FROM goals WHERE user_id=? ORDER BY ${done} ASC, updated_at DESC, id DESC`, user)
       return {
-        goals: all(`SELECT ${columns.goal} FROM goals WHERE user_id=? ORDER BY ${done} ASC, updated_at DESC, id DESC`, user),
+        goals: goals.map(goal => ({ ...goal, plan: { tasks: tasks.get(goal.id) ?? [], total: goal.total_tasks } })),
         hasGoals: Boolean(one('SELECT 1 FROM goals WHERE user_id=? LIMIT 1', user)),
         notes: all(`SELECT ${columns.noteList} FROM notes WHERE user_id=? ORDER BY updated_at DESC, id DESC LIMIT 3`, user),
         month, totals: totals(user, month), savings: savings(user)
       }
     }, 'DEFERRED'),
     goals,
-    goal: goalDetail,
-    goalPage: (user, id, options) => transact(db, () => ({
-      goal: goalDetail(user, id), list: reads.items(user, id, options)
-    }), 'DEFERRED'),
-    items: (user, id, options) => {
-      row('goal', 'goals', user, id)
-      return page(columns.item, 'created_at', true, 'goal_items WHERE user_id=? AND goal_id=?', [user, id], 'items:' + id, options)
-    },
-    tasks: (user, id, options) => {
-      row('item', 'goal_items', user, id)
-      return page(columns.task, 'created_at', true, 'tasks WHERE user_id=? AND item_id=?', [user, id], 'tasks:' + id, options)
-    },
+    goal: (user, id) => goalDetail(user, id).goal,
+    goalPage: (user, id) => transact(db, () => goalDetail(user, id), 'DEFERRED'),
+    goalTasks: (user, id) => goalDetail(user, id).tasks,
     notes: (user, options) => page(columns.noteList, 'updated_at', false, 'notes WHERE user_id=?', [user], 'notes', options),
     note: (user, id) => row('note', 'notes', user, id),
     finance: (user, options) => transact(db, () => {
@@ -145,43 +157,31 @@ export function workspaceQueries(db) {
     goalCreate(user, id, input, now) {
       run('INSERT INTO goals (id,user_id,title,description,tone,updated_at) VALUES (?,?,?,?,?,?)',
         id, user, input.title, input.description, input.tone, now)
-      return goalDetail(user, id)
+      return row('goal', 'goals', user, id)
     },
     goalUpdate(user, id, input, now) {
-      expectVersion(goalDetail(user, id), input)
+      expectVersion(row('goal', 'goals', user, id), input)
       run('UPDATE goals SET title=?, description=?, tone=?, updated_at=?, version=version+1 WHERE user_id=? AND id=? AND version=?',
         input.title, input.description, input.tone, now, user, id, input.version)
-      return goalDetail(user, id)
+      return row('goal', 'goals', user, id)
     },
     goalDelete(user, id, input) {
-      const goal = expectVersion(goalDetail(user, id), input)
-      if (goal.items !== input.items || goal.total_tasks !== input.tasks) conflict(goal)
+      const goal = expectVersion(row('goal', 'goals', user, id), input)
+      if (goal.total_tasks !== input.tasks) conflict(goal)
       run('DELETE FROM goals WHERE user_id=? AND id=? AND version=?', user, id, input.version)
       return { id }
     },
-    itemCreate(user, id, input, now, goalId) {
+    taskCreate(user, id, input, now, goalId) {
       row('goal', 'goals', user, goalId)
-      run('INSERT INTO goal_items (id,user_id,goal_id,title,created_at) VALUES (?,?,?,?,?)', id, user, goalId, input.title, now)
-      touchGoal(user, goalId, now)
-      return row('item', 'goal_items', user, id)
-    },
-    itemUpdate(user, id, input, now) {
-      const item = expectVersion(row('item', 'goal_items', user, id), input)
-      run('UPDATE goal_items SET title=?, version=version+1 WHERE user_id=? AND id=? AND version=?', input.title, user, id, input.version)
-      touchGoal(user, item.goal_id, now)
-      return row('item', 'goal_items', user, id)
-    },
-    itemDelete(user, id, input, now) {
-      const item = expectVersion(row('item', 'goal_items', user, id), input)
-      if (input.tasks !== item.total_tasks) conflict(item)
-      run('DELETE FROM goal_items WHERE user_id=? AND id=? AND version=?', user, id, input.version)
-      touchGoal(user, item.goal_id, now, -item.total_tasks, -item.done_tasks)
-      return { id }
-    },
-    taskCreate(user, id, input, now, itemId) {
-      row('item', 'goal_items', user, itemId)
-      run('INSERT INTO tasks (id,user_id,item_id,title,created_at) VALUES (?,?,?,?,?)', id, user, itemId, input.title, now)
-      touchAncestors(user, itemId, now, 1)
+      let container = one('SELECT id FROM goal_items WHERE user_id=? AND goal_id=? ORDER BY created_at, id LIMIT 1', user, goalId)
+      if (!container) {
+        const containerId = randomUUID()
+        run('INSERT INTO goal_items (id,user_id,goal_id,title,created_at) VALUES (?,?,?,?,?)',
+          containerId, user, goalId, input.title, now)
+        container = { id: containerId }
+      }
+      run('INSERT INTO tasks (id,user_id,item_id,title,created_at) VALUES (?,?,?,?,?)', id, user, container.id, input.title, now)
+      touchAncestors(user, container.id, now, 1)
       return row('task', 'tasks', user, id)
     },
     taskUpdate(user, id, input, now) {

@@ -3,7 +3,7 @@ import { inputs } from './workspace'
 
 const recordId = z.string().min(1).max(120)
 const stamp = z.iso.datetime({ offset: true }).transform(value => Date.parse(value))
-const title = z.string().pipe(inputs.itemCreate.shape.title)
+const title = z.string().trim().min(1).max(120)
 const task = z.object({ id: recordId, title, done: z.boolean() })
 const item = z.object({ id: recordId, title, tasks: z.array(task).max(1000) })
 const goal = z.object({ id: recordId, title: z.string(), description: z.string().optional(), tone: z.string().optional(), items: z.array(item).max(1000) })

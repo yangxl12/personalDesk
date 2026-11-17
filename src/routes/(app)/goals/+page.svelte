@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { progress } from '#lib/contracts/workspace'
   import { useUi } from '#lib/ui.svelte'
   import { editGoal } from '#lib/editors'
   import Icon from '#lib/components/Icon.svelte'
@@ -22,18 +21,12 @@
 {#if data.list.items.length}
   <div class="collection-grid">
     {#each data.list.items as goal (goal.id)}
-      <a href={'/goals/' + goal.id} class={'card collection-tile ' + goal.tone}>
-        <div class="tile-head">
-          <span class="goal-icon"><Icon name="goals" /></span>
-          <span class="badge" class:complete={progress(goal) === 100}>{ui.t(progress(goal) === 100 ? '已完成' : '进行中')}</span>
-        </div>
+      <a href={'/goals/' + goal.id} class="card goal-tile">
         <h2>{goal.title}</h2>
-        {#if goal.description}<p class="line-clamp">{goal.description}</p>{/if}
-        <div class="tile-progress">
+        <span class="goal-tile-foot">
           <span>{goal.total_tasks ? ui.t('已完成 {done}/{total} 项任务', { done: goal.done_tasks, total: goal.total_tasks }) : ui.t('暂无任务')}</span>
-          <b>{progress(goal)}%</b>
-        </div>
-        <progress value={progress(goal)} max="100" aria-label={goal.title}></progress>
+          <Icon name="arrow" size={15} />
+        </span>
       </a>
     {/each}
   </div>

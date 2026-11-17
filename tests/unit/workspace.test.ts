@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { decimal, inputs, progress } from '../../src/lib/contracts/workspace'
+import { decimal, inputs } from '../../src/lib/contracts/workspace'
 
 describe('workspace business rules', () => {
-  it('caps an unfinished goal at 99% and distinguishes empty goals', () => {
-    expect(progress({ done_tasks: 0, total_tasks: 0 })).toBe(0)
-    expect(progress({ done_tasks: 999, total_tasks: 1000 })).toBe(99)
-    expect(progress({ done_tasks: 1000, total_tasks: 1000 })).toBe(100)
+  it('confirms goal deletion by task count only', () => {
+    expect(inputs.goalDelete.parse({ version: 1, tasks: 3 })).toEqual({ version: 1, tasks: 3 })
+    expect(inputs.goalDelete.safeParse({ version: 1, items: 1, tasks: 3 }).success).toBe(false)
+    expect(inputs.goalCreate.parse({ title: '  读书  ' })).toMatchObject({ title: '读书', description: '', tone: 'violet' })
   })
 
   it('stores money as exact cents and validates real dates', () => {

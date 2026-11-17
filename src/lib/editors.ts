@@ -1,4 +1,4 @@
-import { decimal, today, type Goal, type Item, type Note, type Savings, type Task, type Transaction } from '#lib/contracts/workspace'
+import { decimal, today, type Goal, type Note, type Savings, type Task, type Transaction } from '#lib/contracts/workspace'
 import type { WorkspaceUi } from '#lib/ui.svelte'
 
 export function editGoal(ui: WorkspaceUi, goal?: Goal) {
@@ -6,34 +6,19 @@ export function editGoal(ui: WorkspaceUi, goal?: Goal) {
     title: goal ? '编辑目标' : '新建目标',
     path: goal ? '/goals/' + goal.id : '/goals',
     method: goal ? 'PATCH' : 'POST',
-    values: goal && { version: goal.version },
-    fields: [
-      { name: 'title', label: '目标名称', value: goal?.title, required: true },
-      { name: 'description', label: '目标说明', type: 'textarea', value: goal?.description },
-      { name: 'tone', label: '颜色', type: 'select', value: goal?.tone, options: [['violet', '紫色'], ['mint', '绿色'], ['amber', '橙色']] }
-    ],
+    values: goal && { version: goal.version, description: goal.description, tone: goal.tone },
+    fields: [{ name: 'title', label: '目标名称', value: goal?.title, required: true }],
     after: goal ? undefined : data => '/goals/' + data.id
   })
 }
 
-export function editItem(ui: WorkspaceUi, goalId: string, item?: Item) {
-  ui.open({
-    title: item ? '编辑事项' : '新建事项',
-    path: item ? '/items/' + item.id : '/goals/' + goalId + '/items',
-    method: item ? 'PATCH' : 'POST',
-    values: item && { version: item.version },
-    fields: [{ name: 'title', label: '事项名称', value: item?.title, required: true }]
-  })
-}
-
-export function editTask(ui: WorkspaceUi, itemId: string, refresh: () => Promise<void>, task?: Task) {
+export function editTask(ui: WorkspaceUi, goalId: string, task?: Task) {
   ui.open({
     title: task ? '编辑任务' : '新建任务',
-    path: task ? '/tasks/' + task.id : '/items/' + itemId + '/tasks',
+    path: task ? '/tasks/' + task.id : '/goals/' + goalId + '/tasks',
     method: task ? 'PATCH' : 'POST',
     values: task && { version: task.version },
-    fields: [{ name: 'title', label: '任务名称', value: task?.title, required: true }],
-    refreshLocal: refresh
+    fields: [{ name: 'title', label: '任务名称', value: task?.title, required: true }]
   })
 }
 

@@ -36,19 +36,19 @@ afterAll(() => {
 describe('SQLite transactions', () => {
   it('updates ancestors, rejects stale deletion and cascades after reconfirmation', () => {
     const { data: goal } = change('goalCreate', null, { title: 'English', description: '', tone: 'violet' })
-    const { data: item } = change('itemCreate', goal.id, { title: 'Practice' })
-    const { data: task } = change('taskCreate', item.id, { title: 'Record' })
+    const { data: task } = change('taskCreate', goal.id, { title: 'Record' })
     const before = queries.goal(user, goal.id)
     const key = randomUUID()
     const marked = change('taskUpdate', task.id, { version: task.version, done: true }, key)
     expect(change('taskUpdate', task.id, { version: task.version, done: true }, key)).toMatchObject({ replayed: true, revisions: marked.revisions })
     expect(() => change('taskUpdate', task.id, { version: task.version, done: false }, key)).toThrow(expect.objectContaining({ code: 'IDEMPOTENCY_CONFLICT' }))
     expect(queries.goal(user, goal.id)).toMatchObject({ total_tasks: 1, done_tasks: 1 })
+    expect(queries.goalPage(user, goal.id).tasks).toMatchObject([{ id: task.id, title: 'Record', done: 1 }])
     expect(queries.dashboard(user)).toMatchObject({ goals: [{ id: goal.id, total_tasks: 1, done_tasks: 1 }], hasGoals: true })
-    expect(() => change('goalDelete', goal.id, { version: before.version, items: 1, tasks: 1 })).toThrow(expect.objectContaining({ status: 409 }))
+    expect(() => change('goalDelete', goal.id, { version: before.version, tasks: 1 })).toThrow(expect.objectContaining({ status: 409 }))
     expect(() => queries.goal(other, goal.id)).toThrow(expect.objectContaining({ status: 404 }))
     const current = queries.goal(user, goal.id)
-    change('goalDelete', goal.id, { version: current.version, items: 1, tasks: 1 })
+    change('goalDelete', goal.id, { version: current.version, tasks: 1 })
     expect(db.prepare('SELECT COUNT(*) AS n FROM tasks').get()?.n).toBe(0)
   })
 

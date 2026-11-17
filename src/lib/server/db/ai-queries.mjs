@@ -282,9 +282,9 @@ export function aiQueries(db, workspace) {
     aiGoal(user, runId, goalId) {
       live(user, runId, 1)
       const goal = workspace.goal(user, goalId)
-      const tasks = all(`SELECT t.id,t.title,t.done,i.title AS item FROM goal_items i
+      const tasks = all(`SELECT t.id,t.title,t.done FROM goal_items i
         JOIN tasks t ON i.user_id=t.user_id AND i.id=t.item_id WHERE i.user_id=? AND i.goal_id=?
-        ORDER BY i.created_at,i.id,t.created_at,t.id LIMIT 31`, user, goalId)
+        ORDER BY t.done,t.created_at,t.id LIMIT 31`, user, goalId)
       return { id: goal.id, title: goal.title, description: goal.description, done: goal.done_tasks,
         total: goal.total_tasks, tasks: tasks.slice(0, 30), truncated: tasks.length > 30 }
     },

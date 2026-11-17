@@ -1,14 +1,14 @@
 import { Worker } from 'node:worker_threads'
 import { resolve } from 'node:path'
 import type { Chat, Message, Proposal, RunReceipt, RunSnapshot, RunStatus, SendInput, Source } from '#lib/contracts/ai'
-import type { Dashboard, Finance, Goal, Item, List, Note, NoteSummary, Preferences, Revisions, Savings, Task } from '#lib/contracts/workspace'
+import type { Dashboard, Finance, Goal, GoalTask, List, Note, NoteSummary, Preferences, Revisions, Savings } from '#lib/contracts/workspace'
 
 export type PageOptions = { cursor?: string; limit?: number }
 export type GoalOptions = PageOptions & { status?: 'all' | 'active' | 'done' }
 export type Mutation = { data: Record<string, unknown>; revisions: Revisions; replayed?: boolean }
 type Started = RunReceipt & { created: boolean; revisions?: Revisions }
 type AiGoal = { id: string; title: string; description: string; done: number; total: number;
-  tasks: { id: string; title: string; done: number; item: string }[]; truncated: boolean }
+  tasks: { id: string; title: string; done: number }[]; truncated: boolean }
 type Account = { id: string; username: string }
 type Methods = {
   ready: [[], true]
@@ -23,9 +23,8 @@ type Methods = {
   dashboard: [[string], Dashboard]
   goals: [[string, GoalOptions], List<Goal>]
   goal: [[string, string], Goal]
-  goalPage: [[string, string, PageOptions], { goal: Goal; list: List<Item> }]
-  items: [[string, string, PageOptions], List<Item>]
-  tasks: [[string, string, PageOptions], List<Task>]
+  goalPage: [[string, string], { goal: Goal; tasks: GoalTask[] }]
+  goalTasks: [[string, string], GoalTask[]]
   notes: [[string, PageOptions], List<NoteSummary>]
   note: [[string, string], Note]
   finance: [[string, PageOptions & { month?: string }], Finance]

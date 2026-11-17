@@ -11,8 +11,7 @@ import { api, financeOptions, goalOptions, key, pageOptions, readJson, resourceI
 type Operation = keyof typeof inputs
 const mutations: Record<string, Operation> = {
   'POST goals': 'goalCreate', 'PATCH goals/:id': 'goalUpdate', 'DELETE goals/:id': 'goalDelete',
-  'POST goals/:id/items': 'itemCreate', 'PATCH items/:id': 'itemUpdate', 'DELETE items/:id': 'itemDelete',
-  'POST items/:id/tasks': 'taskCreate', 'PATCH tasks/:id': 'taskUpdate', 'DELETE tasks/:id': 'taskDelete',
+  'POST goals/:id/tasks': 'taskCreate', 'PATCH tasks/:id': 'taskUpdate', 'DELETE tasks/:id': 'taskDelete',
   'POST notes': 'noteCreate', 'PATCH notes/:id': 'noteUpdate', 'DELETE notes/:id': 'noteDelete',
   'POST transactions': 'transactionCreate', 'PATCH transactions/:id': 'transactionUpdate', 'DELETE transactions/:id': 'transactionDelete',
   'PATCH savings': 'savingsUpdate', 'PATCH preferences': 'preferencesUpdate'
@@ -49,8 +48,7 @@ const handler = api(async (event: RequestEvent) => {
       case 'revisions': return send({ ...await database('revisions', user), model: modelStatus().version })
       case 'goals': return send(await database('goals', user, goalOptions(searchParams)))
       case 'goals/:id': return send(await database('goal', user, resourceId(id)))
-      case 'goals/:id/items': return send(await database('items', user, resourceId(id), pageOptions(searchParams)))
-      case 'items/:id/tasks': return send(await database('tasks', user, resourceId(id), pageOptions(searchParams)))
+      case 'goals/:id/tasks': return send(await database('goalTasks', user, resourceId(id)))
       case 'notes': return send(await database('notes', user, pageOptions(searchParams)))
       case 'notes/:id': return send(await database('note', user, resourceId(id)))
       case 'transactions': return send(await database('finance', user, financeOptions(searchParams)))

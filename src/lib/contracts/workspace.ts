@@ -27,10 +27,7 @@ const transaction = {
 export const inputs = {
   goalCreate: z.strictObject(goal),
   goalUpdate: z.strictObject({ ...goal, version }),
-  goalDelete: z.strictObject({ version, items: count, tasks: count }),
-  itemCreate: z.strictObject(item),
-  itemUpdate: z.strictObject({ ...item, version }),
-  itemDelete: z.strictObject({ version, tasks: count }),
+  goalDelete: z.strictObject({ version, tasks: count }),
   taskCreate: z.strictObject(item),
   taskUpdate: z.strictObject({ title: title.optional(), done: z.boolean().optional(), version })
     .refine(value => value.title !== undefined || value.done !== undefined),
@@ -65,8 +62,10 @@ export type Progress = { done_tasks: number; total_tasks: number }
 export type Goal = Row & Progress & {
   title: string; description: string; tone: z.infer<typeof tone>; updated_at: number; items?: number
 }
-export type Item = Row & Progress & { title: string; goal_id: string; created_at: number }
 export type Task = Row & { title: string; done: number; item_id: string; created_at: number; completed_at: number | null }
+export type TaskBrief = Pick<Task, 'id' | 'title' | 'done' | 'version'>
+export type GoalTask = Omit<Task, 'item_id'>
+export type GoalPlan = { tasks: TaskBrief[]; total: number }
 export type Note = Row & { title: string; summary: string; updated_at: number; created_at: number; body: string }
 export type NoteSummary = Omit<Note, 'body'>
 export type Transaction = Row & {
@@ -78,14 +77,9 @@ export type List<T> = { items: T[]; nextCursor: string | null }
 export type Revisions = Record<string, number>
 export type Totals = { income: string; expense: string; balance: string }
 export type Finance = List<Transaction> & { month: string; totals: Totals; savings: Savings }
+export type DashboardGoal = Goal & { plan: GoalPlan }
 export type Dashboard = {
-  goals: Goal[]; hasGoals: boolean; notes: NoteSummary[]; month: string; totals: Totals; savings: Savings
-}
-
-export function progress(row: Progress) {
-  if (row.total_tasks === 0) return 0
-  if (row.done_tasks === row.total_tasks) return 100
-  return Math.min(99, Math.round(row.done_tasks / row.total_tasks * 100))
+  goals: DashboardGoal[]; hasGoals: boolean; notes: NoteSummary[]; month: string; totals: Totals; savings: Savings
 }
 
 export function today(timezone: string) {
