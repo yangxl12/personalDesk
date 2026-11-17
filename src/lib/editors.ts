@@ -50,7 +50,7 @@ export async function editNote(ui: WorkspaceUi, note: NoteSummary) {
   }
 }
 
-export function editTransaction(ui: WorkspaceUi, entry?: Transaction) {
+export function editTransaction(ui: WorkspaceUi, entry?: Transaction, refreshLocal?: (data: Record<string, string>) => Promise<void> | void) {
   ui.open({
     title: entry ? '编辑收支' : '记一笔',
     path: entry ? '/transactions/' + entry.id : '/transactions',
@@ -62,7 +62,7 @@ export function editTransaction(ui: WorkspaceUi, entry?: Transaction) {
       { name: 'occurredOn', label: '日期', type: 'date', value: entry?.occurred_on ?? today(ui.preferences.timezone), required: true },
       { name: 'note', label: '备注（选填）', value: entry?.note }
     ],
-    after: data => data.occurred_on ? '/finance?month=' + data.occurred_on.slice(0, 7) : location.pathname + location.search
+    refreshLocal
   })
 }
 
@@ -80,7 +80,7 @@ export function editSavings(ui: WorkspaceUi, savings: Savings) {
   })
 }
 
-export function remove(ui: WorkspaceUi, path: string, values: object, description: string, href?: string, refreshLocal?: () => Promise<void>) {
+export function remove(ui: WorkspaceUi, path: string, values: object, description: string, href?: string, refreshLocal?: (data: Record<string, string>) => Promise<void> | void) {
   ui.open({
     title: '确认删除', method: 'DELETE', path, values, description, after: href ? () => href : undefined, refreshLocal
   })

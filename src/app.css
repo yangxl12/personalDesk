@@ -124,7 +124,7 @@ h2 { font-size: 17px; font-weight: 750; }
 .text-link { color: var(--primary); font-weight: 700; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; min-height: 34px; white-space: nowrap; }
 .text-link:hover { text-decoration: underline; }
 
-.dashboard-grid { display: grid; grid-template-columns: 1.08fr 1fr; gap: 18px; }
+.dashboard-grid { display: grid; gap: 18px; }
 .dashboard-goals { grid-column: 1 / -1; min-width: 0; }
 .goal-board {
   --gap: calc(var(--gutter) / 2);
@@ -195,9 +195,12 @@ h2 { font-size: 17px; font-weight: 750; }
 .check-row:hover .row-actions, .check-row:focus-within .row-actions { opacity: 1; }
 @media (hover: none) { .check-row .row-actions { opacity: 1; } }
 
-.dashboard-grid > .notes-card { grid-column: auto; }
-.dashboard-grid > .finance-card { align-self: start; }
-.dashboard-grid > .notes-card .note-grid { grid-template-columns: 1fr; }
+.finance-card { grid-column: 1 / -1; }
+.finance-body { display: grid; grid-template-columns: 1.25fr 1fr; gap: 16px; align-items: start; }
+.finance-body .savings { margin-top: 0; }
+.finance-month { color: var(--muted); font-size: 12px; font-weight: 650; font-variant-numeric: tabular-nums; letter-spacing: 0; }
+.ledger-button { padding-inline: 11px; color: var(--muted); }
+.ledger-button:hover { color: var(--primary); }
 .card { background: var(--paper); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; min-width: 0; }
 .section-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
 .section-head h2 { display: flex; align-items: center; gap: 9px; }
@@ -231,7 +234,6 @@ progress::-moz-progress-bar { background: var(--tone, var(--primary)); border-ra
 .stat { border: 1px solid var(--border); border-radius: 10px; background: var(--inset); padding: 12px 10px; min-width: 0; }
 .stat span { display: flex; align-items: center; gap: 4px; color: var(--muted); font-size: 12px; }
 .stat strong { display: block; margin-top: 6px; font-size: clamp(14px, 1.4vw, 21px); font-variant-numeric: tabular-nums; letter-spacing: -.045em; overflow-wrap: anywhere; }
-.finance-stats.compact .stat { padding: 9px 8px; }
 .income { color: var(--positive); }
 .expense { color: var(--negative); }
 .savings { margin-top: 12px; padding: 10px 12px; border-radius: 11px; background: var(--savings-bg); }
@@ -266,10 +268,13 @@ progress::-moz-progress-bar { background: var(--tone, var(--primary)); border-ra
 .page-actions, .row-actions { display: flex; gap: 5px; align-items: center; }
 .badge { display: inline-flex; font-size: 12px; font-weight: 700; border-radius: 999px; background: var(--primary-soft); color: var(--primary); padding: 5px 9px; white-space: nowrap; }
 .badge.complete { color: var(--positive); background: var(--positive-soft); }
-.finance-grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; }
-.finance-grid .savings { margin: 0; }
-.ledger { margin-top: 16px; }
 .month-field input { max-width: 150px; padding: 6px 7px; border: 1px solid var(--border); border-radius: 7px; color: var(--ink); background: var(--paper); }
+.ledger-dialog { width: min(640px, calc(100% - 24px)); }
+.ledger-tools { display: flex; align-items: center; gap: 8px; }
+.ledger-body { padding: 4px 20px 12px; max-height: calc(100dvh - 220px); overflow-y: auto; scrollbar-width: thin; }
+.ledger-note { padding: 24px 0; text-align: center; color: var(--muted); }
+.ledger-more { display: flex; margin: 12px auto 2px; }
+.footer-add { margin-right: auto; }
 .transaction-row { display: flex; gap: 10px; align-items: center; min-height: 60px; padding-block: 6px; }
 .transaction-row + .transaction-row, .history-row + .history-row { border-top: 1px solid var(--border); }
 .transaction-icon.income { color: var(--positive); background: var(--positive-soft); }
@@ -376,7 +381,8 @@ dialog footer { display: flex; justify-content: flex-end; gap: 8px; padding: 12p
 .model-form input[readonly] { background: var(--inset); color: var(--muted); }
 
 @container (max-width: 760px) {
-  .dashboard-grid, .finance-grid, .settings-grid { grid-template-columns: 1fr; }
+  .dashboard-grid, .settings-grid { grid-template-columns: 1fr; }
+  .finance-body { grid-template-columns: 1fr; gap: 12px; }
   .stat strong { font-size: clamp(14px, 3cqi, 20px); }
 }
 @container (max-width: 515px) {
@@ -385,6 +391,8 @@ dialog footer { display: flex; justify-content: flex-end; gap: 8px; padding: 12p
   .card { padding: 15px; }
   .section-actions { gap: 7px; }
   .notes-card .section-actions .text-link { display: none; }
+  .finance-month { display: none; }
+  .ledger-button { padding-inline: 9px; }
 }
 @media (min-width: 761px) {
   .goal-board { scrollbar-width: thin; scrollbar-color: var(--control-border) transparent; }
@@ -425,8 +433,6 @@ dialog footer { display: flex; justify-content: flex-end; gap: 8px; padding: 12p
 }
 @media (max-width: 365px) {
   .stat span { font-size: 11px; }
-  .finance-stats.compact .stat { padding-inline: 5px; }
-  .finance-stats.compact .stat strong { font-size: 13px; }
   .section-head h2 { font-size: 15px; }
   .section-head .section-icon { width: 30px; height: 30px; }
   .transaction-row { gap: 4px; }
@@ -472,7 +478,6 @@ dialog footer { display: flex; justify-content: flex-end; gap: 8px; padding: 12p
 .pagination { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
 .line-clamp { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
 .conflict-details { margin: 8px 0 0; max-height: 140px; overflow: auto; overflow-wrap: anywhere; white-space: pre-wrap; }
-.finance-grid > .savings { padding: 18px; border: 1px solid var(--border); }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition-duration: 0s !important; } }
 
 .access-options { display: grid; gap: 10px; border: 0; border-top: 1px solid var(--border); padding: 12px 0 0; margin: 8px 0; }

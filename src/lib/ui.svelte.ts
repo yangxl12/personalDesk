@@ -15,7 +15,7 @@ export type EditorSpec = {
   fields?: Field[]; values?: object; description?: string
   toBody?: (values: Record<string, string>) => object
   after?: (data: Record<string, string>) => string
-  refreshLocal?: () => Promise<void>
+  refreshLocal?: (data: Record<string, string>) => Promise<void> | void
 }
 
 export class WorkspaceUi {
@@ -78,7 +78,7 @@ export class WorkspaceUi {
   async save(spec: EditorSpec, body: object, key: string) {
     const response = await commit<Record<string, string>>(spec.method ?? 'POST', spec.path, body, key)
     if (response.revisions) await refreshModules(response.revisions)
-    if (spec.refreshLocal) await spec.refreshLocal()
+    if (spec.refreshLocal) await spec.refreshLocal(response.data)
     if (spec.after) await goto(spec.after(response.data))
     this.notify(spec.method === 'DELETE' ? '已删除' : '已保存')
   }

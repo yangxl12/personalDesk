@@ -36,8 +36,7 @@
     if (ui.chatOpen) previouslyFocused = document.activeElement as HTMLElement | null
   })
   const pages = [
-    ['/', 'home', '工作台'], ['/finance', 'finance', '财务概览'],
-    ['/chats', 'chats', 'AI 对话历史'], ['/settings', 'settings', '设置']
+    ['/', 'home', '工作台'], ['/chats', 'chats', 'AI 对话历史'], ['/settings', 'settings', '设置']
   ]
   let current = $derived(pages.find(([href]) => page.url.pathname === href || (href !== '/' && page.url.pathname.startsWith(href + '/'))) ?? pages[0])
   let menu = $state(false)

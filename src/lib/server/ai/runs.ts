@@ -118,7 +118,7 @@ async function generate(runtime: Runtime, settings: Configuration | DatabaseErro
     const provider = model(settings)
     const tools: ToolSet = {}
     const currentDate = today(preferences.timezone)
-    const monthDefault = input.pageContext?.page === 'finance' ? input.pageContext.selectedMonth : undefined
+    const monthDefault = input.pageContext?.selectedMonth
     if (preferences.ai_goals) {
       tools.find_goals = tool({
         description: '按关键词查找目标和进度',
@@ -177,25 +177,25 @@ async function generate(runtime: Runtime, settings: Configuration | DatabaseErro
     }
     if (preferences.ai_finance) {
       tools.get_finance_summary = tool({
-        description: '获取指定月份的收支汇总和存款；月份省略时使用当前财务页或账号本月',
+        description: '获取指定月份的收支汇总和存款；月份省略时使用工作台选中月或账号本月',
         inputSchema: z.object({ month: month.optional() }),
         execute: async ({ month: selected }) => {
           await enter(domains.finance)
           const selectedMonth = selected ?? monthDefault ?? currentDate.slice(0, 7)
           const result = await database('aiFinance', user, runId, selectedMonth)
           return { ...result, units: 'CNY', totals: Object.fromEntries(Object.entries(result.totals).map(([key, value]) => [key, decimal(value)])),
-            source: cite({ kind: 'finance', label: selectedMonth, href: '/finance?month=' + selectedMonth }) }
+            source: cite({ kind: 'finance', label: selectedMonth, href: '/?month=' + selectedMonth }) }
         }
       })
     }
     tools.suggest_navigation = tool({
       description: '显示可点击的站内页面入口',
-      inputSchema: z.object({ page: z.enum(['dashboard', 'goals', 'finance', 'notes', 'chats', 'settings']), month: month.optional() }),
+      inputSchema: z.object({ page: z.enum(['dashboard', 'finance', 'chats', 'settings']), month: month.optional() }),
       execute: async ({ page, month: selected }) => {
         await enter()
-        const href = page === 'dashboard' ? '/' : '/' + page
-        return cite({ kind: 'page', label: { dashboard: '工作台', goals: '目标管理', finance: '财务概览', notes: '思考记录', chats: 'AI 对话历史', settings: '设置' }[page],
-          href: href + (page === 'finance' && selected ? '?month=' + selected : '') })
+        const target = { dashboard: '/', finance: '/', chats: '/chats', settings: '/settings' }[page]
+        return cite({ kind: 'page', label: { dashboard: '工作台', finance: '财务概览', chats: 'AI 对话历史', settings: '设置' }[page],
+          href: target + (page === 'finance' && selected ? '?month=' + selected : '') })
       }
     })
     const attachments = []

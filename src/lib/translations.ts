@@ -13,6 +13,7 @@ export const english: Record<string, string> = {
   "目标管理": "Goals",
   "目标详情": "Goal details",
   "财务概览": "Finances",
+  "财务": "Finances",
   "思考记录": "Notes",
   "AI 对话历史": "Chat history",
   "AI 助手": "AI assistant",

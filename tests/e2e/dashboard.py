@@ -30,7 +30,7 @@ def verify_dashboard(page, phone, base):
     page.wait_for_load_state("networkidle")
     expect(page.locator(".goal-empty-add")).to_be_visible()
     expect(page.locator(".goal-empty")).to_have_text("")
-    expect(page.get_by_role("navigation", name="页面").get_by_role("link")).to_have_count(4)
+    expect(page.get_by_role("navigation", name="页面").get_by_role("link")).to_have_count(3)
 
     goals = [mutate("POST", "/goals", {"title": f"方向 {i}", "description": "", "tone": "violet"}) for i in range(1, 9)]
     mutate("POST", f'/goals/{goals[0]["id"]}/tasks', {"title": "完成一次练习"})

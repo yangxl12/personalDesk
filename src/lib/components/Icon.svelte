@@ -26,6 +26,7 @@ const paths: Record<string, string> = {
   settings: '<path d="M10 3h4l.6 2.7 2 .9 2.5-1.1 2 3.5-1.9 1.8v2.4l1.9 1.8-2 3.5-2.5-1.1-2 .9L14 21h-4l-.6-2.7-2-.9-2.5 1.1-2-3.5 1.9-1.8v-2.4L2.9 9l2-3.5 2.5 1.1 2-.9L10 3Z"/><circle cx="12" cy="12" r="3"/>',
   monitor: '<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M12 17v4m-4 0h8"/>',
   clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  list: '<path d="M9 6h12M9 12h12M9 18h12M3.5 6h.01M3.5 12h.01M3.5 18h.01"/>',
   sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/>',
   moon: '<path d="M20.9 13.4a9 9 0 0 1-10.3-10.3 9 9 0 1 0 10.3 10.3Z"/>',
   cloud: '<path d="M6 18a4 4 0 1 1 .8-7.9 6 6 0 0 1 11.6 1A3.5 3.5 0 0 1 18 18Z"/>',

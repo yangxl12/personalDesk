@@ -153,7 +153,7 @@ def verify_mobile_drawer(page):
     opened()
 
     # Swiping from a link must close without following that link.
-    link = drawer.get_by_role("link", name="财务概览").bounding_box()
+    link = drawer.get_by_role("link", name="AI 对话历史").bounding_box()
     y = link["y"] + link["height"] / 2
     swipe((240, y), (28, y))
     closed()
@@ -192,8 +192,8 @@ def verify_mobile_drawer(page):
 
     trigger.tap()
     opened()
-    drawer.get_by_role("link", name="财务概览").tap()
-    expect(page).to_have_url(initial_url.rstrip("/") + "/finance")
+    drawer.get_by_role("link", name="AI 对话历史").tap()
+    expect(page).to_have_url(initial_url.rstrip("/") + "/chats")
     page.wait_for_timeout(360)
     closed()
     trigger.tap()

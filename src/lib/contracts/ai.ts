@@ -6,7 +6,7 @@ export const domains = { goals: 1, notes: 2, finance: 4 }
 export const attachment = z.strictObject({ kind: z.enum(['goal', 'note']), id })
 export const modelRef = z.union([id, z.literal(deploymentModelRef)])
 export const pageContext = z.strictObject({
-  page: z.enum(['dashboard', 'goals', 'finance', 'notes', 'chats', 'settings']),
+  page: z.enum(['dashboard', 'chats', 'settings']),
   entityId: id.optional(),
   selectedMonth: month.optional()
 })
