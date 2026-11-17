@@ -14,6 +14,8 @@ export default defineConfig({
         'default-src': ['self'],
         'script-src': ['self'],
         'style-src': ['self', 'unsafe-inline'],
+        // 勾选框的对勾是内联 SVG 背景图，需要放开 data: 图片。
+        'img-src': ['self', 'data:'],
         'object-src': ['none'],
         'base-uri': ['none'],
         'frame-ancestors': ['none'],

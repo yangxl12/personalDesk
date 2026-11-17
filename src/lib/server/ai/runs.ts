@@ -100,9 +100,9 @@ async function generate(runtime: Runtime, settings: Configuration | DatabaseErro
     return source
   }
   const goalSource = (goal: { id: string; title: string }) =>
-    cite({ kind: 'goal', label: goal.title, href: '/goals/' + goal.id })
+    cite({ kind: 'goal', label: goal.title, href: '/#goal-' + goal.id })
   const noteSource = (note: { id: string; title: string; summary: string }) =>
-    cite({ kind: 'note', label: note.title || note.summary, href: '/notes/' + note.id })
+    cite({ kind: 'note', label: note.title || note.summary, href: '/#note-' + note.id })
   let status: RunStatus = 'completed'
   let errorCode: string | null = null
   try {

@@ -1,39 +1,53 @@
-import { decimal, today, type Goal, type Note, type Savings, type Task, type Transaction } from '#lib/contracts/workspace'
+import { decimal, today, type Note, type NoteSummary, type Savings, type Transaction } from '#lib/contracts/workspace'
 import type { WorkspaceUi } from '#lib/ui.svelte'
+import { request } from '#lib/client'
 
-export function editGoal(ui: WorkspaceUi, goal?: Goal) {
+export function createGoal(ui: WorkspaceUi) {
   ui.open({
-    title: goal ? '编辑目标' : '新建目标',
-    path: goal ? '/goals/' + goal.id : '/goals',
-    method: goal ? 'PATCH' : 'POST',
-    values: goal && { version: goal.version, description: goal.description, tone: goal.tone },
-    fields: [{ name: 'title', label: '目标名称', value: goal?.title, required: true }],
-    after: goal ? undefined : data => '/goals/' + data.id
+    title: '新建目标',
+    path: '/goals',
+    method: 'POST',
+    fields: [{ name: 'title', label: '目标名称', required: true }]
   })
 }
 
-export function editTask(ui: WorkspaceUi, goalId: string, task?: Task) {
+export function createTask(ui: WorkspaceUi, goalId: string) {
   ui.open({
-    title: task ? '编辑任务' : '新建任务',
-    path: task ? '/tasks/' + task.id : '/goals/' + goalId + '/tasks',
-    method: task ? 'PATCH' : 'POST',
-    values: task && { version: task.version },
-    fields: [{ name: 'title', label: '任务名称', value: task?.title, required: true }]
+    title: '新建任务',
+    path: '/goals/' + goalId + '/tasks',
+    method: 'POST',
+    fields: [{ name: 'title', label: '任务名称', required: true }]
   })
 }
 
-export function editNote(ui: WorkspaceUi, note?: Note) {
+export function createNote(ui: WorkspaceUi) {
   ui.open({
-    title: note ? '编辑思考' : '新建思考',
-    path: note ? '/notes/' + note.id : '/notes',
-    method: note ? 'PATCH' : 'POST',
-    values: note && { version: note.version },
+    title: '新建思考',
+    path: '/notes',
+    method: 'POST',
     fields: [
-      { name: 'title', label: '标题（选填）', value: note?.title },
-      { name: 'body', label: '正文', type: 'textarea', value: note?.body, required: true }
-    ],
-    after: note ? undefined : data => '/notes/' + data.id
+      { name: 'title', label: '标题（选填）' },
+      { name: 'body', label: '正文', type: 'textarea', required: true }
+    ]
   })
+}
+
+export async function editNote(ui: WorkspaceUi, note: NoteSummary) {
+  try {
+    const { data } = await request<Note>('/notes/' + note.id)
+    ui.open({
+      title: '编辑思考',
+      path: '/notes/' + note.id,
+      method: 'PATCH',
+      values: { version: data.version },
+      fields: [
+        { name: 'title', label: '标题（选填）', value: data.title },
+        { name: 'body', label: '正文', type: 'textarea', value: data.body, required: true }
+      ]
+    })
+  } catch (failure) {
+    ui.notify(ui.error(failure))
+  }
 }
 
 export function editTransaction(ui: WorkspaceUi, entry?: Transaction) {

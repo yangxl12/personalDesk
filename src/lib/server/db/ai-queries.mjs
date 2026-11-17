@@ -315,7 +315,7 @@ export function aiQueries(db, workspace) {
         if (!task) missing()
         if (Boolean(task.done) === done) return { unchanged: true }
         const id = randomUUID()
-        const preview = { label: task.title, before: task.done ? '已完成' : '待完成', after: done ? '已完成' : '待完成', href: '/goals/' + task.goal_id }
+        const preview = { label: task.title, before: task.done ? '已完成' : '待完成', after: done ? '已完成' : '待完成', href: '/#goal-' + task.goal_id }
         const expires = Date.now() + 900_000
         run("INSERT INTO ai_proposals VALUES (?,?,?,'pending',?,?,NULL,?)",
           id, user, runId, JSON.stringify({ task, done }), JSON.stringify(preview), expires)

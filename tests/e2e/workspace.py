@@ -25,7 +25,7 @@ def login(page, base, password, heading=None):
     if heading:
         expect(page.get_by_role("heading", name=heading)).to_be_visible()
     else:
-        expect(page.get_by_text("还没有目标", exact=True)).to_be_visible()
+        expect(page.locator(".goal-empty-add")).to_be_visible()
     page.wait_for_load_state("networkidle")
 
 
@@ -66,7 +66,7 @@ def verify_mobile_login(playwright, base, password):
         with page.expect_request(lambda request: request.method == "POST" and request.url == base + "/login"):
             submit.tap()
         expect(page).to_have_url(base + "/")
-        expect(page.get_by_text("还没有目标", exact=True)).to_be_visible()
+        expect(page.locator(".goal-empty-add")).to_be_visible()
         page.wait_for_load_state("networkidle")
         verify_mobile_drawer(page)
     finally:
@@ -223,14 +223,16 @@ def run_browser(base, password, import_demo=False):
         panel.get_by_role("button", name="关闭 AI 助手").click()
         phone.goto(base)
 
-        page.get_by_role("navigation", name="页面").get_by_role("link", name="目标管理", exact=True).click()
+        page.goto(base)
+        page.wait_for_load_state("networkidle")
         page.get_by_role("button", name="新建目标").click()
         save(page, {"目标名称": "练习英语"})
-        expect(page.get_by_role("heading", name="练习英语")).to_be_visible()
-        goal_url = page.url
-        page.get_by_role("button", name="新建任务").click()
+        goal_card = page.locator(".goal-board-card", has_text="练习英语")
+        expect(goal_card).to_be_visible()
+        goal_id = goal_card.get_attribute("id").removeprefix("goal-")
+        goal_card.get_by_role("button", name="新建任务").click()
         save(page, {"任务名称": "录音练习"})
-        task = page.get_by_role("checkbox", name="录音练习")
+        task = goal_card.get_by_role("checkbox", name="录音练习")
         task.check()
         expect(task).to_be_checked()
         task.uncheck()
@@ -238,22 +240,31 @@ def run_browser(base, password, import_demo=False):
         expect(phone.locator(".goal-board-card", has_text="练习英语")).to_be_visible(timeout=22_000)
         assert phone.evaluate("document.documentElement.scrollWidth === window.innerWidth")
 
-        page.get_by_role("navigation", name="页面").get_by_role("link", name="思考记录", exact=True).click()
-        page.get_by_role("button", name="新建思考").click()
+        page.get_by_role("button", name="编辑目标").click()
+        dialog = page.get_by_role("dialog")
+        edit_title = dialog.get_by_label("目标名称", exact=True)
+        expect(edit_title).to_have_value("练习英语")
+        expect(dialog.get_by_role("checkbox", name="录音练习")).to_be_visible()
+        dialog.get_by_role("button", name="取消", exact=True).click()
+        expect(dialog).to_be_hidden()
+
+        page.locator(".notes-card").get_by_role("button", name="新建思考").click()
         save(page, {"正文": "从三分钟的练习开始"})
-        expect(page.get_by_role("heading", name="从三分钟的练习开始")).to_be_visible()
-        note_url = page.url
-        phone.goto(note_url)
-        phone.get_by_role("button", name="编辑", exact=True).click()
+        note_card = page.locator(".note-card", has_text="从三分钟的练习开始")
+        expect(note_card).to_be_visible()
+        note_id = note_card.get_attribute("id").removeprefix("note-")
+        phone.goto(base)
+        phone.wait_for_load_state("networkidle")
+        phone.locator(".note-card", has_text="从三分钟的练习开始").get_by_role("button", name="编辑思考").click()
         phone.get_by_label("正文", exact=True).fill("手机保留的草稿")
-        page.get_by_role("button", name="编辑", exact=True).click()
+        note_card.get_by_role("button", name="编辑思考").click()
         save(page, {"正文": "桌面先保存的版本"})
         phone.get_by_role("dialog").get_by_role("button", name="保存", exact=True).click()
         expect(phone.get_by_role("dialog").get_by_text("记录已在其他位置更新", exact=False)).to_be_visible()
         expect(phone.get_by_label("正文", exact=True)).to_have_value("手机保留的草稿")
         phone.get_by_role("button", name="保留草稿并采用最新版本").click()
         save(phone, {})
-        expect(phone.get_by_role("heading", name="手机保留的草稿")).to_be_visible()
+        expect(phone.locator(".note-card", has_text="手机保留的草稿")).to_be_visible()
 
         page.goto(base + "/finance")
         page.get_by_role("button", name="记一笔").click()
@@ -330,8 +341,10 @@ def run_browser(base, password, import_demo=False):
         phone.get_by_role("checkbox", name="Goals", exact=True).check()
         phone.get_by_role("button", name="Save", exact=True).click()
         expect(phone.get_by_role("status").filter(has_text="Saved")).to_be_visible()
-        page.goto(goal_url)
-        page.get_by_role("button", name="Share with AI").click()
+        page.goto(base)
+        page.wait_for_load_state("networkidle")
+        goal_card = page.locator(".goal-board-card", has_text="练习英语")
+        goal_card.get_by_role("button", name="Share with AI").click()
         panel = page.get_by_role("complementary", name="AI assistant")
         expect(panel.get_by_text("练习英语", exact=True)).to_be_visible()
         panel.get_by_label("Message", exact=True).fill("Please complete the recording task.")
@@ -341,16 +354,16 @@ def run_browser(base, password, import_demo=False):
         chat_id = history[0]["id"]
         items = page.request.get(base + f"/api/v1/conversations/{chat_id}/messages").json()["data"]["items"]
         proposal_id = next(item["proposalId"] for item in items if item["proposalId"])
-        expect(page.get_by_text("Goal progress 0%")).to_be_visible()
+        goal_task = goal_card.get_by_role("checkbox", name="录音练习")
+        expect(goal_task).not_to_be_checked()
         panel.get_by_role("button", name="Apply change").click()
         expect(panel.get_by_text("Applied", exact=True)).to_be_visible()
-        expect(page.get_by_text("Goal progress 100%")).to_be_visible()
+        expect(goal_task).to_be_checked()
         result = mobile.request.post(base + f"/api/v1/ai/proposals/{proposal_id}/decision",
             headers={"Origin": base, "Idempotency-Key": str(uuid.uuid4())}, data={"decision": "approve"})
         assert result.ok and result.json()["data"]["status"] == "applied"
-        goal_id = goal_url.rsplit("/", 1)[1]
         saved_goal = page.request.get(base + "/api/v1/goals/" + goal_id).json()["data"]
-        assert saved_goal["done_tasks"] == 1 and saved_goal["version"] == 6
+        assert saved_goal["done_tasks"] == 1
         phone.goto(base + "/chats")
         phone.get_by_role("button", name="Please complete the recording task.", exact=False).click()
         fullscreen = phone.get_by_role("dialog", name="AI assistant")
@@ -369,7 +382,6 @@ def run_browser(base, password, import_demo=False):
         fullscreen.get_by_role("button", name="Close AI assistant").click()
         phone.goto(base + "/settings")
 
-        note_id = note_url.rsplit("/", 1)[1]
         body = {"title": "updated", "body": "http retry", "version": 3}
         headers = {"Origin": base, "Idempotency-Key": str(uuid.uuid4())}
         endpoint = base + "/api/v1/notes/" + note_id

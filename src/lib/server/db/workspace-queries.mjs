@@ -124,7 +124,7 @@ export function workspaceQueries(db) {
       return {
         goals: goals.map(goal => ({ ...goal, plan: { tasks: tasks.get(goal.id) ?? [], total: goal.total_tasks } })),
         hasGoals: Boolean(one('SELECT 1 FROM goals WHERE user_id=? LIMIT 1', user)),
-        notes: all(`SELECT ${columns.noteList} FROM notes WHERE user_id=? ORDER BY updated_at DESC, id DESC LIMIT 3`, user),
+        notes: all(`SELECT ${columns.noteList} FROM notes WHERE user_id=? ORDER BY updated_at DESC, id DESC`, user),
         month, totals: totals(user, month), savings: savings(user)
       }
     }, 'DEFERRED'),
