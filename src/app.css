@@ -127,14 +127,19 @@ h2 { font-size: 17px; font-weight: 750; }
 .dashboard-grid { display: grid; grid-template-columns: 1.08fr 1fr; gap: 18px; }
 .dashboard-goals { grid-column: 1 / -1; min-width: 0; }
 .goal-board {
-  grid-column: 1 / -1; display: flex; gap: calc(var(--gutter) / 2);
+  --gap: calc(var(--gutter) / 2);
+  --peek: 22px;
+  grid-column: 1 / -1; display: flex; gap: var(--gap);
   overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain;
   scroll-snap-type: x mandatory; scrollbar-width: none; -webkit-overflow-scrolling: touch;
 }
+/* 首尾留白，让卡片能真正居中，同时露出前后卡片的一角作为可滑动的提示 */
+.goal-board::before, .goal-board::after { content: ''; flex: 0 0 var(--peek); }
 .goal-board-card { display: flex; flex-direction: column; gap: 2px; padding: 22px 24px 16px; }
 .goal-slide {
-  position: relative; flex: 0 0 100%; height: clamp(230px, 40dvh, 420px);
-  padding: 22px 24px 56px; scroll-snap-align: start;
+  position: relative; flex: 0 0 calc(100% - (var(--peek) + var(--gap)) * 2);
+  height: clamp(230px, 40dvh, 420px);
+  padding: 22px 24px 56px; scroll-snap-align: center;
   transition: border-color .18s, box-shadow .18s;
 }
 .goal-slide:hover { border-color: #c9bdf2; box-shadow: 0 12px 26px #2c21541a; }
@@ -350,8 +355,9 @@ dialog footer { display: flex; justify-content: flex-end; gap: 8px; padding: 12p
   .notes-card .section-actions .text-link { display: none; }
 }
 @media (min-width: 761px) {
-  .goal-board { scrollbar-width: thin; scrollbar-color: var(--control-border) transparent; }
-  .goal-slide { flex: 0 0 calc(50% - var(--gutter) / 4); }
+  .goal-board { --peek: 36px; scrollbar-width: thin; scrollbar-color: var(--control-border) transparent; }
+  .goal-board::before, .goal-board::after { display: none; }
+  .goal-slide { flex: 0 0 calc((100% - var(--gap) * 2 - var(--peek)) / 2); scroll-snap-align: start; }
 }
 @media (min-width: 761px) and (max-width: 1120px) {
   :root { --sidebar-width: 186px; --panel-width: 310px; }
@@ -369,7 +375,6 @@ dialog footer { display: flex; justify-content: flex-end; gap: 8px; padding: 12p
   .topbar { min-height: 60px; padding-inline: 13px; }
   #main { --gutter: 14px; padding: 20px var(--gutter) 30px; }
   .dashboard-grid { gap: 12px; }
-  .goal-board { gap: calc(var(--gutter) / 2); }
   .goal-board::-webkit-scrollbar { display: none; }
   .goal-board-card { padding: 18px 18px 12px; }
   .goal-board-card.goal-slide { padding: 18px 18px 54px; }

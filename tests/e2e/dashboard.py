@@ -47,6 +47,11 @@ def verify_dashboard(page, phone, base):
     expect(cards).to_have_count(8)
     expect(page.get_by_role("tab")).to_have_count(0)
     readonly(page)
+    # Two cards per view on desktop, with the third one peeking on the right.
+    board = page.locator(".goal-board").bounding_box()
+    assert abs(page.locator(".goal-board-card").first.bounding_box()["x"] - board["x"]) < 1
+    third = page.locator(".goal-board-card").nth(2).bounding_box()
+    assert abs((board["x"] + board["width"]) - third["x"] - 36) < 1
     first = page.locator(".goal-board-card", has_text="方向 1")
     expect(first.locator(".check-row")).to_have_text("完成一次练习")
     expect(first.locator(".check-row")).not_to_have_class(re.compile(r"\bdone\b"))
@@ -72,12 +77,24 @@ def verify_dashboard(page, phone, base):
     expect(phone.locator(".goal-board-card")).to_have_count(8)
     expect(phone.get_by_role("tab")).to_have_count(0)
     readonly(phone)
-    # The rail shows one goal per card, flush with the cards below it, spaced at half the page gutter.
+    # The rail centers one goal card and peeks the neighbours on both sides.
     assert phone.evaluate("getComputedStyle(document.querySelector('.goal-board')).columnGap") == "7px"
+    board = phone.locator(".goal-board").bounding_box()
     card = phone.locator(".goal-board-card").first.bounding_box()
-    finance = phone.locator(".finance-card").bounding_box()
-    assert abs(card["x"] - finance["x"]) < 1
-    assert abs((card["x"] + card["width"]) - (finance["x"] + finance["width"])) < 1
+    assert card["width"] < board["width"] - 40
+    assert abs((card["x"] + card["width"] / 2) - (board["x"] + board["width"] / 2)) < 1
+    second = phone.locator(".goal-board-card").nth(1).bounding_box()
+    assert abs((board["x"] + board["width"]) - second["x"] - 22) < 1
+    phone.evaluate("""() => {
+      const rail = document.querySelector('.goal-board')
+      const cards = rail.querySelectorAll('.goal-board-card')
+      rail.scrollTo({ left: cards[1].offsetLeft - cards[0].offsetLeft, behavior: 'instant' })
+    }""")
+    phone.wait_for_timeout(400)
+    assert abs(phone.locator(".goal-board-card").nth(1).bounding_box()["x"] - card["x"]) < 1
+    assert phone.locator(".goal-board-card").first.bounding_box()["x"] < 0
+    phone.evaluate("document.querySelector('.goal-board').scrollTo({ left: 0, behavior: 'instant' })")
+    phone.wait_for_timeout(300)
     phone.locator(".goal-board-card", has_text="方向 1").locator(".goal-board-title").tap()
     expect(phone).to_have_url(base + "/")
     phone.locator(".goal-board-card", has_text="方向 1").locator(".goal-board-go").tap()
