@@ -5,8 +5,10 @@
   import { page } from '$app/state'
   import { useUi } from '#lib/ui.svelte'
   import { commit, refreshModel, refreshModules, request, RequestError } from '#lib/client'
+  import { remove } from '#lib/editors'
   import type { ModelSettings } from '#lib/contracts/model'
   import { month } from '#lib/contracts/workspace'
+  import type { List } from '#lib/contracts/workspace'
   import type { Chat, Message, RunReceipt, RunSnapshot, SendInput } from '#lib/contracts/ai'
   import Icon from './Icon.svelte'
   import ProposalCard from './ProposalCard.svelte'
@@ -35,6 +37,10 @@
   let retryAttempt: { id: string; modelRef?: string; key: string } | undefined
   let cancelAttempt: { id: string; key: string } | undefined
   let loadTicket = 0
+  let view = $state<'chat' | 'history'>('chat')
+  let chats = $state<Chat[]>([])
+  let nextCursor = $state<string | null>(null)
+  let loadingChats = $state(false)
 
   $effect(() => {
     const id = ui.chatId
@@ -251,7 +257,42 @@
     ui.resetChat()
     if (draftChat === null) draft = ''
     error = ''
+    view = 'chat'
     void tick().then(() => textarea?.focus())
+  }
+
+  async function loadChats(cursor?: string) {
+    loadingChats = true
+    try {
+      const { data } = await request<List<Chat>>('/conversations' + (cursor ? '?cursor=' + encodeURIComponent(cursor) : ''))
+      chats = cursor ? [...chats, ...data.items] : data.items
+      nextCursor = data.nextCursor
+    } catch (failure) {
+      error = ui.error(failure)
+    } finally {
+      loadingChats = false
+    }
+  }
+
+  function toggleHistory() {
+    if (view === 'history') { view = 'chat'; return }
+    view = 'history'
+    void loadChats()
+  }
+
+  async function selectChat(id: string) {
+    ui.chatId = id
+    view = 'chat'
+    nearBottom = true
+    await tick()
+    textarea?.focus()
+  }
+
+  function deleteChat(chat: Chat) {
+    remove(ui, '/conversations/' + chat.id, { version: chat.version }, ui.t('删除「{title}」？', { title: chat.title }), undefined, () => {
+      chats = chats.filter(item => item.id !== chat.id)
+      if (ui.chatId === chat.id) { ui.resetChat(); view = 'chat' }
+    })
   }
 
   function trapFocus(event: KeyboardEvent) {
@@ -276,27 +317,49 @@
   <header class="ai-head">
     <span class="section-icon"><Icon name="spark" size={19} /></span>
     <div>
-      <strong>{ui.t('AI 助手')}</strong>
-      {#if ui.chatModel.models.length > 1}
-        <select class="chat-model" aria-label={ui.t('当前模型')} value={ui.chatModel.activeRef ?? ''} disabled={pending || switchingModel || generating}
-          onchange={event => switchModel(event.currentTarget)}>
-          {#each ui.chatModel.models as profile (profile.ref)}
-            <option value={profile.ref}>{profile.label || profile.id} · {profile.provider === 'deepseek' ? 'DeepSeek' : ui.t('自定义兼容接口')}</option>
-          {/each}
-        </select>
-      {:else}
-        <small>{ui.chatModel.models[0]?.label || ui.chatModel.models[0]?.id || ui.t('AI 模型尚未配置')}</small>
+      <strong>{ui.t(view === 'history' ? 'AI 对话历史' : 'AI 助手')}</strong>
+      {#if view === 'chat'}
+        {#if ui.chatModel.models.length > 1}
+          <select class="chat-model" aria-label={ui.t('当前模型')} value={ui.chatModel.activeRef ?? ''} disabled={pending || switchingModel || generating}
+            onchange={event => switchModel(event.currentTarget)}>
+            {#each ui.chatModel.models as profile (profile.ref)}
+              <option value={profile.ref}>{profile.label || profile.id} · {profile.provider === 'deepseek' ? 'DeepSeek' : ui.t('自定义兼容接口')}</option>
+            {/each}
+          </select>
+        {:else}
+          <small>{ui.chatModel.models[0]?.label || ui.chatModel.models[0]?.id || ui.t('AI 模型尚未配置')}</small>
+        {/if}
       {/if}
     </div>
-    <a class="button icon-button" href="/settings#ai-settings" aria-label={ui.t('AI 设置')} title={ui.t('AI 设置')} onclick={() => { if (mobile) close() }}><Icon name="settings" size={18} /></a>
+    <button class="button icon-button" type="button" aria-label={ui.t('AI 对话历史')} title={ui.t('AI 对话历史')}
+      aria-pressed={view === 'history'} onclick={toggleHistory}><Icon name="chats" size={18} /></button>
     <button class="button icon-button" type="button" aria-label={ui.t('新建会话')} onclick={newChat}><Icon name="plus" size={18} /></button>
     <button class="button icon-button" type="button" aria-label={ui.t('关闭 AI 助手')} onclick={close}><Icon name="close" size={18} /></button>
   </header>
-  {#if header}<div class="conversation-title">{header.title}</div>{/if}
-  <div class="message-list" bind:this={timeline} onscroll={event => {
-    const node = event.currentTarget
-    nearBottom = node.scrollHeight - node.scrollTop - node.clientHeight < 55
-  }}>
+  {#if view === 'history'}
+    <div class="chat-history">
+      {#each chats as chat (chat.id)}
+        <div class="history-row">
+          <button class="history-entry" type="button" aria-current={ui.chatId === chat.id ? 'true' : undefined} onclick={() => selectChat(chat.id)}>
+            <span class="section-icon"><Icon name="chats" size={18} /></span>
+            <span><strong>{chat.title}</strong><small>{ui.date(chat.updated_at)}</small></span>
+            {#if ui.chatId === chat.id}<Icon name="check" size={16} />{/if}
+          </button>
+          <button class="button icon-button" type="button" aria-label={ui.t('删除会话')} onclick={() => deleteChat(chat)}><Icon name="trash" size={16} /></button>
+        </div>
+      {:else}
+        <p class="chat-history-empty">{ui.t(loadingChats ? '加载中…' : '还没有对话')}</p>
+      {/each}
+      {#if nextCursor}
+        <button class="button secondary chat-history-more" type="button" disabled={loadingChats} onclick={() => loadChats(nextCursor ?? undefined)}>{ui.t('加载更多')}</button>
+      {/if}
+    </div>
+  {:else}
+    {#if header}<div class="conversation-title">{header.title}</div>{/if}
+    <div class="message-list" bind:this={timeline} onscroll={event => {
+      const node = event.currentTarget
+      nearBottom = node.scrollHeight - node.scrollTop - node.clientHeight < 55
+    }}>
     {#if before}<button class="button secondary" type="button" onclick={() => load(ui.chatId, ui.chatRevision, true)}>{ui.t('查看更早消息')}</button>{/if}
     {#each messages as message (message.id)}
       {@const content = runtime?.runId === message.runId && message.role === 'assistant' ? runtime : null}
@@ -352,4 +415,5 @@
       {/if}
     </div>
   </form>
+  {/if}
 </aside>
