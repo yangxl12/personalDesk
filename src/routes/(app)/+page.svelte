@@ -2,7 +2,6 @@
   import { goto } from '$app/navigation'
   import { page } from '$app/state'
   import { useUi } from '#lib/ui.svelte'
-  import { money } from '#lib/contracts/workspace'
   import { createNote, editTransaction } from '#lib/editors'
   import EmptyArt from '#lib/components/EmptyArt.svelte'
   import Icon from '#lib/components/Icon.svelte'
@@ -14,7 +13,6 @@
   let { data } = $props()
   const ui = useUi()
   let dashboard = $derived(data.dashboard)
-  let balanceTone = $derived(Number(dashboard.totals.balance) < 0 ? 'expense' : 'income')
   let ledger = $state<string | null>(null)
   // 非响应式游标，避免同一 ?month= 深链关闭弹窗后被反复打开。
   let linked = ''
@@ -41,24 +39,6 @@
 </script>
 
 <div class="dashboard-grid">
-  <header class="dashboard-hero">
-    <div>
-      <span class="eyebrow">{ui.date(Date.now())}</span>
-      <h1>{ui.t('工作台')}</h1>
-      <p class="hero-sub">{ui.t('把重要的事，放在看得见的地方。')}</p>
-    </div>
-    <div class="hero-metrics">
-      <div class="hero-metric"><span>{ui.t('全部目标')}</span><strong>{String(dashboard.goals.length).padStart(2, '0')}</strong></div>
-      <div class="hero-metric"><span>{ui.t('结余')}</span><strong class={balanceTone}>{money(dashboard.totals.balance)}</strong></div>
-      <div class="hero-metric"><span>{ui.t('全部记录')}</span><strong>{String(dashboard.notes.length).padStart(2, '0')}</strong></div>
-    </div>
-  </header>
-
-  <div class="board-head">
-    <span class="eyebrow">{ui.t('目标管理')}</span>
-    <span class="board-hint">{ui.t('向左滑动查看更多')}</span>
-  </div>
-
   <GoalCards goals={dashboard.goals} />
 
   <section class="card finance-card">
