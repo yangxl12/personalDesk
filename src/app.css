@@ -192,12 +192,14 @@ h2 { font-size: 16px; font-weight: 650; letter-spacing: -.012em; }
    骨架
    -------------------------------------------------------------------------- */
 
-.shell { position: relative; z-index: 1; display: flex; min-height: 100dvh; align-items: flex-start; }
-.workspace { flex: 1 1 0; min-width: 0; }
+.shell { --topbar-h: 72px; position: relative; z-index: 1; display: flex; min-height: 100dvh; align-items: flex-start; }
+.workspace { flex: 1 1 0; min-width: 0; padding-top: calc(var(--topbar-h) + env(safe-area-inset-top, 0px)); }
 
+/* 顶栏脱离文档流，滚动时始终钉在视口顶部 */
 .topbar {
-  position: sticky; top: 0; z-index: 5; min-height: 72px;
-  padding: 0 clamp(20px, 3vw, 46px);
+  position: fixed; top: 0; left: 0; right: 0; z-index: 6;
+  height: calc(var(--topbar-h) + env(safe-area-inset-top, 0px));
+  padding: env(safe-area-inset-top, 0px) clamp(20px, 3vw, 46px) 0;
   display: flex; align-items: center; justify-content: space-between; gap: 14px;
   background: var(--topbar-bg);
   backdrop-filter: blur(22px) saturate(165%);
@@ -205,6 +207,8 @@ h2 { font-size: 16px; font-weight: 650; letter-spacing: -.012em; }
   border-bottom: 1px solid var(--line);
   box-shadow: inset 0 1px 0 var(--glass-edge);
 }
+/* AI 面板展开时顶栏收回到工作区宽度，不压到面板下面 */
+.shell:has(.ai-panel) .topbar { right: var(--panel-width); }
 .topbar::after {
   content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px;
   background: linear-gradient(90deg, transparent, var(--primary-tint) 28%, var(--glow-2) 62%, transparent);
@@ -214,7 +218,7 @@ h2 { font-size: 16px; font-weight: 650; letter-spacing: -.012em; }
 
 #main {
   --gutter: clamp(20px, 3vw, 46px);
-  max-width: 1460px; margin-inline: auto; padding: 30px var(--gutter) 56px;
+  max-width: 1460px; margin-inline: auto; padding: 18px var(--gutter) 56px;
   outline: none; container-type: inline-size;
 }
 
@@ -360,7 +364,8 @@ h2 { font-size: 16px; font-weight: 650; letter-spacing: -.012em; }
   --peek: 40px;
   grid-column: 1 / -1; display: flex; gap: var(--gap);
   overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain;
-  padding-block: 4px 10px;
+  /* 上下留出阴影的完整扩散空间，负外边距把多出来的空隙吃掉，版式位置不变 */
+  padding-block: 8px 44px; margin-block: -8px -34px;
   scroll-snap-type: x mandatory; scrollbar-width: none; -webkit-overflow-scrolling: touch;
 }
 .goal-board::-webkit-scrollbar { display: none; }
@@ -838,10 +843,12 @@ dialog footer { display: flex; justify-content: flex-end; gap: 9px; padding: 15p
   :root { --panel-width: 320px; }
 }
 @media (max-width: 760px) {
-  .topbar { min-height: 64px; padding-inline: 14px; }
+  .shell { --topbar-h: 64px; }
+  .topbar { padding-inline: 14px; }
+  .shell:has(.ai-panel) .topbar { right: 0; }
   .topbar .brand { font-size: 18px; }
   .account-name { display: none; }
-  #main { --gutter: 15px; padding: 22px var(--gutter) 40px; }
+  #main { --gutter: 15px; padding: 12px var(--gutter) 40px; }
   .dashboard-grid { gap: 16px; }
   .goal-board {
     margin-inline: calc(var(--gutter) * -1);
