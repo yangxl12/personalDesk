@@ -218,7 +218,9 @@ h2 { font-size: 16px; font-weight: 650; letter-spacing: -.012em; }
 
 #main {
   --gutter: clamp(20px, 3vw, 46px);
-  max-width: 1460px; margin-inline: auto; padding: 18px var(--gutter) 56px;
+  /* 竖向节奏：顶栏到首卡、卡片与卡片之间共用同一个间距 */
+  --stack-gap: 18px;
+  max-width: 1460px; margin-inline: auto; padding: var(--stack-gap) var(--gutter) 56px;
   outline: none; container-type: inline-size;
 }
 
@@ -352,7 +354,7 @@ h2 { font-size: 16px; font-weight: 650; letter-spacing: -.012em; }
    工作台版式
    -------------------------------------------------------------------------- */
 
-.dashboard-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 22px; }
+.dashboard-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--stack-gap, 22px); }
 .dashboard-grid > * { animation: rise .75s var(--ease) both; }
 .dashboard-grid > :nth-child(1) { animation-delay: .02s; }
 .dashboard-grid > :nth-child(2) { animation-delay: .08s; }
@@ -364,8 +366,8 @@ h2 { font-size: 16px; font-weight: 650; letter-spacing: -.012em; }
   --peek: 40px;
   grid-column: 1 / -1; display: flex; gap: var(--gap);
   overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain;
-  /* 上下留出阴影的完整扩散空间，负外边距把多出来的空隙吃掉，版式位置不变 */
-  padding-block: 8px 44px; margin-block: -8px -34px;
+  /* 上下留出阴影的完整扩散空间，负外边距把多出来的空隙吃掉，卡片间距只留 --stack-gap */
+  padding-block: 8px 44px; margin-block: -8px -44px;
   scroll-snap-type: x mandatory; scrollbar-width: none; -webkit-overflow-scrolling: touch;
 }
 .goal-board::-webkit-scrollbar { display: none; }
@@ -848,8 +850,8 @@ dialog footer { display: flex; justify-content: flex-end; gap: 9px; padding: 15p
   .shell:has(.ai-panel) .topbar { right: 0; }
   .topbar .brand { font-size: 18px; }
   .account-name { display: none; }
-  #main { --gutter: 15px; padding: 12px var(--gutter) 40px; }
-  .dashboard-grid { gap: 16px; }
+  #main { --gutter: 15px; --stack-gap: 12px; padding: var(--stack-gap) var(--gutter) 40px; }
+  .dashboard-grid { gap: var(--stack-gap); }
   .goal-board {
     margin-inline: calc(var(--gutter) * -1);
     padding-inline: var(--gutter);
