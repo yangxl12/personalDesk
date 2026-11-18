@@ -64,19 +64,23 @@
 
   $effect(() => {
     const open = ui.chatOpen
-    if (open) {
-      const id = ui.chatId
-      untrack(() => {
-        if (++openCount > 1 && id) void load(id, ui.chatRevision)
-        void tick().then(() => textarea?.focus())
-      })
-    } else {
-      source?.close()
-      source = undefined
-    }
+    if (!open) return
+    const id = ui.chatId
+    untrack(() => {
+      if (++openCount > 1 && id) void load(id, ui.chatRevision)
+      void tick().then(() => textarea?.focus())
+    })
   })
 
-  onDestroy(() => source?.close())
+  // 关闭面板后保持订阅，后台生成状态才能准确反映到工作台的 AI 按钮上。
+  $effect(() => {
+    ui.aiRunning = generating
+  })
+
+  onDestroy(() => {
+    source?.close()
+    ui.aiRunning = false
+  })
 
   async function stickToBottom() {
     if (!nearBottom) return
@@ -143,6 +147,7 @@
       if (runtime && !['queued', 'running'].includes(runtime.status)) {
         connection.close()
         source = undefined
+        if (!ui.chatOpen && runtime.status === 'completed') ui.notify('AI 回复已完成')
         void load(ui.chatId, ui.chatRevision)
         void refreshModules({ chats: 0 })
       }
@@ -373,7 +378,7 @@
           {#if text}<div class="bubble">{text}</div>{/if}
           {#if state === 'running' || state === 'queued'}<small>{ui.t('正在生成…')}</small>{/if}
           {#each content?.sources ?? message.sources as item (item.href)}
-            <a class="text-link chat-source" href={item.href} onclick={() => { if (mobile) close() }}>{ui.t(item.label)}<Icon name="chevron" size={14} /></a>
+            <a class="text-link chat-source" href={item.href}>{ui.t(item.label)}<Icon name="chevron" size={14} /></a>
           {/each}
           {#if proposal}<ProposalCard id={proposal} ready={state === 'completed'} />{/if}
           {#if errorCode}

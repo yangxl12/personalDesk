@@ -23,6 +23,7 @@ export class WorkspaceUi {
   chatOpen = $state(false)
   chatId = $state<string | null>(null)
   chatRevision = $state(0)
+  aiRunning = $state(false)
   chatModel: ModelStatus
   attachment = $state<Attachment | null>(null)
   editor = $state<EditorSpec | null>(null)

@@ -104,8 +104,11 @@ h2 { font-size: 17px; font-weight: 750; }
 .primary:hover { background: var(--primary-hover); }
 .quiet { color: var(--primary); background: var(--primary-soft); }
 .quiet:hover { background: var(--primary-tint); }
-.topbar .ai-toggle { color: var(--primary); }
+.topbar .ai-toggle { position: relative; color: var(--primary); }
 .topbar .ai-toggle.active { background: var(--primary-soft); }
+.topbar .ai-dot { position: absolute; top: 5px; right: 5px; width: 7px; height: 7px; border-radius: 50%; background: var(--primary); box-shadow: 0 0 0 2px var(--paper); animation: ai-pulse 1.4s ease-in-out infinite; }
+@keyframes ai-pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .4; transform: scale(.7); } }
+@media (prefers-reduced-motion: reduce) { .topbar .ai-dot { animation: none; } }
 .icon-button { min-height: 36px; width: 36px; padding: 0; color: var(--muted); }
 .icon-button[data-action^="delete"]:hover { color: var(--negative); background: var(--negative-soft); }
 .danger { background: #ab363e; color: white; }

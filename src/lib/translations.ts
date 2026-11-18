@@ -13,6 +13,8 @@ export const english: Record<string, string> = {
   "思考记录": "Notes",
   "AI 对话历史": "Chat history",
   "AI 助手": "AI assistant",
+  "AI 正在生成": "AI is generating",
+  "AI 回复已完成": "AI reply ready",
   "关闭 AI 助手": "Close AI assistant",
   "目标方向": "Goal directions",
   "拖动调整顺序": "Drag to reorder",
