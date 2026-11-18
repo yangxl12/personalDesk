@@ -155,7 +155,7 @@
           <input type="password" bind:value={editor.apiKey} disabled={!!busy} required={!canReuseKey} maxlength="2048" autocomplete="new-password"
             aria-describedby="ai-key-hint" placeholder={canReuseKey ? ui.t('留空以保留当前密钥') : undefined}>
         </label>
-        <p id="ai-key-hint" class="field-hint">{ui.t('API Key 在服务端加密保存，保存后仅可更换。')}</p>
+        <p id="ai-key-hint" class="field-hint">{ui.t('API Key 明文保存在此浏览器的本地数据库中，同源脚本可读，不随备份导出。')}</p>
         <div class="actions">
           <button class="button secondary" type="button" disabled={!!busy} onclick={() => { editor = null; clearFeedback() }}>{ui.t('取消')}</button>
           <button class="button secondary" type="submit" value="test" disabled={!!busy || stale}>{ui.t(busy === 'test' ? '正在测试…' : '测试连接')}</button>

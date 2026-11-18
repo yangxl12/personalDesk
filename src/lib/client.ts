@@ -1,24 +1,23 @@
 import { invalidate } from '$app/navigation'
 import type { Revisions } from '#lib/contracts/workspace'
+import { dispatch } from '#lib/local/transport'
+import { RequestError } from '#lib/errors'
 
-export class RequestError extends Error {
-  constructor(public status: number, public code: string, message: string, public fields?: unknown) {
-    super(message)
-  }
-}
+export { RequestError }
 
+// 签名保持不变：调用点照旧传原接口路径，内部换成对 IndexedDB 仓储的分派。
 export async function request<T>(path: string, options?: RequestInit): Promise<{ data: T; revisions?: Revisions }> {
-  const response = await fetch('/api/v1' + path, options)
-  let value
-  try {
-    value = await response.json()
-  } catch {
-    throw new RequestError(response.status, 'UNAVAILABLE', '服务暂不可用')
+  const url = new URL(path, 'http://buxu.local')
+  const method = (options?.method ?? 'GET').toUpperCase()
+  let body: unknown
+  if (typeof options?.body === 'string') {
+    try {
+      body = JSON.parse(options.body)
+    } catch {
+      body = undefined
+    }
   }
-  if (!response.ok) {
-    throw new RequestError(response.status, value.error?.code, value.error?.message ?? '服务暂不可用', value.error?.fields)
-  }
-  return value
+  return dispatch<T>(method, url.pathname, url.searchParams, body)
 }
 
 export async function refreshModules(revisions: Revisions) {
@@ -31,9 +30,9 @@ export async function refreshModel(version: number) {
 }
 
 export async function commit<T>(method: string, path: string, body: object, key: string) {
-  const response = await request<T>(path, {
-    method, headers: { 'content-type': 'application/json', 'idempotency-key': key }, body: JSON.stringify(body)
-  })
+  // 本地单进程没有并发提交，幂等键只保留参数位置，不再落库。
+  void key
+  const response = await request<T>(path, { method, body: JSON.stringify(body) })
   if (response.revisions) window.dispatchEvent(new CustomEvent('buxu:revisions', { detail: response.revisions }))
   return response
 }

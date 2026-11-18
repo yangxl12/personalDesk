@@ -1,13 +1,2 @@
-import type { Preferences } from '#lib/contracts/workspace'
-
-declare global {
-  namespace App {
-    interface Locals {
-      user: { id: string; username: string } | null
-      sessionHash: string | null
-      preferences?: Preferences
-    }
-  }
-}
-
+// 本地版没有服务端会话与请求上下文，App.Locals 不再需要扩展。
 export {}

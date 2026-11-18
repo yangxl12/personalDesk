@@ -139,9 +139,5 @@
         <button class="button primary" type="submit" disabled={busy || !!pendingAppearance || !!current}>{ui.t('保存')}</button>
       </form>
   </section>
-  <section class="card settings-card">
-    <header class="section-head"><h2><span class="section-icon"><Icon name="settings" /></span>{ui.t('账号')}</h2></header>
-    <form method="POST" action="/logout" data-sveltekit-reload><button class="button secondary" type="submit">{ui.t('退出登录')}</button></form>
-  </section>
   <DataSettings />
 </div>

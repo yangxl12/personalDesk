@@ -5,6 +5,8 @@
   import { page } from '$app/state'
   import { useUi } from '#lib/ui.svelte'
   import { commit, refreshModel, refreshModules, request, RequestError } from '#lib/client'
+  import { subscribeRun } from '#lib/local/ai/run'
+  import type { EventPayload, RunEvent } from '#lib/local/ai/runtime'
   import { remove } from '#lib/editors'
   import type { ModelSettings } from '#lib/contracts/model'
   import { month } from '#lib/contracts/workspace'
@@ -29,7 +31,7 @@
   let textarea: HTMLTextAreaElement
   let timeline: HTMLDivElement
   let nearBottom = true
-  let source: EventSource | undefined
+  let subscription: { close: () => void } | undefined
   let lastEvent = -1
   let streamRun: string | null = null
   let openCount = 0
@@ -55,7 +57,7 @@
         header = null
         runtime = null
         streamRun = null
-        source?.close()
+        subscription?.close()
         nearBottom = true
       }
       void load(id, revision)
@@ -78,7 +80,7 @@
   })
 
   onDestroy(() => {
-    source?.close()
+    subscription?.close()
     ui.aiRunning = false
   })
 
@@ -113,8 +115,8 @@
       if (header.runId && ui.chatOpen) watch(header.runId)
       if (!header.runId) {
         runtime = null
-        source?.close()
-        source = undefined
+        subscription?.close()
+        subscription = undefined
       }
     } catch (failure) {
       if (id !== ui.chatId || ticket !== loadTicket) return
@@ -124,51 +126,39 @@
   }
 
   function watch(run: string) {
-    if (streamRun === run && source) return
-    source?.close()
+    if (streamRun === run && subscription) return
+    subscription?.close()
     streamRun = run
     lastEvent = -1
-    const connection = new EventSource('/api/v1/ai/runs/' + run + '/events')
-    source = connection
-    const listen = (event: Event) => {
-      if (source !== connection || !(event instanceof MessageEvent)) return
-      const value = JSON.parse(event.data) as RunSnapshot & { sequence: number; delta?: string; offset?: number }
-      if (value.sequence <= lastEvent && event.type !== 'snapshot') return
+    const connection = subscribeRun(run, (event: RunEvent, value: EventPayload) => {
+      if (value.sequence <= lastEvent && event !== 'snapshot') return
       lastEvent = value.sequence
-      if (event.type === 'text_delta') {
+      if (event === 'text_delta') {
         if (runtime && value.offset !== undefined) {
           const received = Math.max(0, runtime.text.length - value.offset)
           runtime.text += (value.delta ?? '').slice(received)
         }
       } else {
-        runtime = value
+        runtime = { ...value }
       }
       void stickToBottom()
       if (runtime && !['queued', 'running'].includes(runtime.status)) {
         connection.close()
-        source = undefined
+        subscription = undefined
         if (!ui.chatOpen && runtime.status === 'completed') ui.notify('AI 回复已完成')
         void load(ui.chatId, ui.chatRevision)
         void refreshModules({ chats: 0 })
       }
-    }
-    for (const event of ['snapshot', 'status', 'text_delta', 'sources', 'proposal', 'done', 'error']) {
-      connection.addEventListener(event, listen)
-    }
-    connection.addEventListener('error', event => {
-      if (event instanceof MessageEvent || source !== connection) return
-      if (connection.readyState === EventSource.CLOSED) {
-        source = undefined
-        void load(ui.chatId, ui.chatRevision)
-      }
     })
+    subscription = connection
   }
 
   async function send() {
     const text = draft.trim()
     if ([...text].length > 12000) { error = ui.t('消息最多 12,000 个字符'); return }
     if (pending || switchingModel || generating || !text) return
-    const parts = page.url.pathname.split('/').filter(Boolean)
+    // 路由在 (app) 分组下，用 route.id 取站内路径，不受部署 base 影响。
+    const parts = (page.route.id ?? '').replace(/^\/\(app\)/, '').split('/').filter(Boolean)
     const name = (parts[0] ?? 'dashboard') as NonNullable<SendInput['pageContext']>['page']
     const selected = month.safeParse(page.url.searchParams.get('month'))
     const context = { page: name, entityId: parts[1], selectedMonth: selected.success ? selected.data : undefined }
@@ -313,7 +303,10 @@
     AI_NOT_CONFIGURED: 'AI 模型尚未配置', AI_CANCELLED: '已停止生成', AI_TIMEOUT: '模型响应超时',
     AI_PERMISSION_CHANGED: 'AI 数据访问权限已变更', AI_RATE_LIMITED: '模型请求过于频繁',
     AI_IMPORTED_FAILED: '原 Demo 中发送失败', AI_PROVIDER_AUTH: '模型鉴权失败', AI_INTERRUPTED: '生成中断，请重试',
-    AI_MODEL_NOT_FOUND: '该模型配置已删除或不可用', AI_CONFIG_KEY_FAILED: '无法使用服务端 AI 配置加密密钥'
+    AI_MODEL_NOT_FOUND: '该模型配置已删除或不可用',
+    AI_PROVIDER_ERROR: '连接失败，请检查接口地址、模型名称和 API Key',
+    AI_TOOL_LIMIT: '工具调用次数已用尽，请换个问法',
+    AI_INPUT_BUDGET: '对话内容过长，请新建会话'
   }
   const prompts = ['帮我看看有哪些进行中的目标', '总结最近的思考记录', '查看本月的收支情况']
 </script>

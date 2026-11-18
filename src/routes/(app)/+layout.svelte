@@ -1,10 +1,9 @@
 <script lang="ts">
   import { onMount, tick } from 'svelte'
   import { goto } from '$app/navigation'
+  import { resolve } from '$app/paths'
   import { page } from '$app/state'
   import { provideUi } from '#lib/ui.svelte'
-  import { refreshModules, request, RequestError } from '#lib/client'
-  import type { Revisions } from '#lib/contracts/workspace'
   import Icon from '#lib/components/Icon.svelte'
   import Brand from '#lib/components/Brand.svelte'
   import Editor from '#lib/components/Editor.svelte'
@@ -71,10 +70,8 @@
   $effect(() => {
     if (ui.chatOpen) previouslyFocused = document.activeElement as HTMLElement | null
   })
-  const titles: Record<string, string> = { '/': '工作台', '/chats': 'AI 对话历史', '/settings': '设置' }
-  let title = $derived(titles[page.url.pathname] ?? '工作台')
-  let revisions: Revisions = {}
-  let checking = false
+  const titles: Record<string, string> = { '': '工作台', '/chats': 'AI 对话历史', '/settings': '设置' }
+  let title = $derived(titles[(page.route.id ?? '').replace(/^\/\(app\)/, '')] ?? '工作台')
 
   $effect(() => {
     document.documentElement.dataset.theme = data.preferences.theme
@@ -86,47 +83,22 @@
     const resize = () => { mobile = query.matches }
     resize()
     query.addEventListener('change', resize)
-    revisions = { ...data.revisions }
-    const sync = setInterval(check, 15_000)
-    document.addEventListener('visibilitychange', check)
-    window.addEventListener('online', check)
     window.addEventListener('buxu:revisions', localUpdate)
     window.addEventListener('popstate', syncHash)
     window.addEventListener('hashchange', syncHash)
     syncHash()
     return () => {
       query.removeEventListener('change', resize)
-      clearInterval(sync)
-      document.removeEventListener('visibilitychange', check)
-      window.removeEventListener('online', check)
       window.removeEventListener('buxu:revisions', localUpdate)
       window.removeEventListener('popstate', syncHash)
       window.removeEventListener('hashchange', syncHash)
     }
   })
 
-  async function check() {
-    if (document.hidden || checking) return
-    checking = true
-    try {
-      const { data: latest } = await request<Revisions>('/revisions')
-      const changed = Object.fromEntries(Object.entries(latest).filter(([module, revision]) => revision > (revisions[module] ?? 0)))
-      if (Object.keys(changed).length === 0) return
-      if (ui.editor) ui.remoteChange = true
-      if (changed.chats || changed.preferences) ui.chatRevision++
-      await refreshModules(changed)
-      for (const [module, revision] of Object.entries(latest)) revisions[module] = Math.max(revision, revisions[module] ?? 0)
-    } catch (failure) {
-      if (failure instanceof RequestError && failure.status === 401 && !ui.editor) await goto('/login')
-    } finally {
-      checking = false
-    }
-  }
-
+  // 本地写入完成后 commit() 会广播模块修订号，AI 面板据此重载消息。
   function localUpdate(event: Event) {
-    const updated = (event as CustomEvent<Revisions>).detail
+    const updated = (event as CustomEvent<Record<string, number>>).detail
     if (updated.chats || updated.preferences) ui.chatRevision++
-    for (const [module, revision] of Object.entries(updated)) revisions[module] = Math.max(revision, revisions[module] ?? 0)
   }
 
   function escape(event: KeyboardEvent) {
@@ -143,7 +115,7 @@
     <header class="topbar">
       <Brand label={ui.t('步序')} />
       <div class="topbar-actions">
-        <a class="button icon-button" href="/settings" aria-label={ui.t('设置')} title={ui.t('设置')}><Icon name="settings" size={19} /></a>
+        <a class="button icon-button" href={resolve('settings')} aria-label={ui.t('设置')} title={ui.t('设置')}><Icon name="settings" size={19} /></a>
         <button bind:this={aiButton} class="button icon-button ai-toggle" class:active={ui.chatOpen} type="button"
           aria-label={ui.t(ui.aiRunning ? 'AI 正在生成' : 'AI 助手')} aria-expanded={ui.chatOpen} onclick={openChat}>
           <Icon name="ai" size={21} />

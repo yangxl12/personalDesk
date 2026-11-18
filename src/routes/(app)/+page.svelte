@@ -1,7 +1,10 @@
 <script lang="ts">
+  import { onMount } from 'svelte'
   import { goto } from '$app/navigation'
+  import { resolve } from '$app/paths'
   import { page } from '$app/state'
   import { useUi } from '#lib/ui.svelte'
+  import { request } from '#lib/client'
   import { createNote, editTransaction } from '#lib/editors'
   import EmptyArt from '#lib/components/EmptyArt.svelte'
   import Icon from '#lib/components/Icon.svelte'
@@ -14,8 +17,20 @@
   const ui = useUi()
   let dashboard = $derived(data.dashboard)
   let ledger = $state<string | null>(null)
+  let backupDue = $state(false)
   // 非响应式游标，避免同一 ?month= 深链关闭弹窗后被反复打开。
   let linked = ''
+
+  onMount(() => {
+    void request<{ due: boolean }>('/backup/status')
+      .then(result => { backupDue = result.data.due })
+      .catch(() => { backupDue = false })
+  })
+
+  async function dismissBackup() {
+    backupDue = false
+    await request('/backup/dismiss', { method: 'POST', body: '{}' }).catch(() => {})
+  }
 
   // AI 来源链接指向 /?month=YYYY-MM，落地即打开该月收支记录。
   $effect(() => {
@@ -28,7 +43,7 @@
 
   function closeLedger() {
     ledger = null
-    if (page.url.searchParams.has('month')) void goto('/', { replace: true, reset: false })
+    if (page.url.searchParams.has('month')) void goto(resolve(''), { replace: true, reset: false })
   }
 
   // 工作台固定展示本月；记到其他月份时打开那个月的收支记录，给出可核对的落点。
@@ -73,4 +88,23 @@
   </section>
 </div>
 
+{#if backupDue}
+  <div class="backup-bar" role="status">
+    <span><Icon name="cloud" size={15} />{ui.t('超过 7 天没有导出备份。浏览器清理数据后无法恢复，建议先导出。')}</span>
+    <button type="button" class="button quiet" onclick={() => void dismissBackup()}>{ui.t('知道了')}</button>
+  </div>
+{/if}
+
 {#if ledger}<Ledger month={ledger} onclose={closeLedger} />{/if}
+
+<style>
+  .backup-bar {
+    display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px;
+    margin-top: 14px; padding: 10px 14px;
+    border: 1px solid var(--border); border-radius: 16px; background: var(--glass-2);
+    box-shadow: inset 0 1px 0 var(--glass-edge);
+    color: var(--muted); font-size: 13px;
+  }
+  .backup-bar span { display: flex; align-items: center; gap: 7px; flex: 1 1 260px; }
+  .backup-bar .button { min-height: 30px; padding: 3px 10px; font-size: 12px; }
+</style>

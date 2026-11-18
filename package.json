@@ -14,22 +14,19 @@
     "dev": "vite dev",
     "dev:lan": "vite dev --host 0.0.0.0 --port 6173 --strictPort",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
-    "build": "vite build",
-    "start": "node build",
-    "account": "node scripts/account.mjs",
-    "backup": "node scripts/backup.mjs",
-    "migrate": "node scripts/migrate.mjs",
+    "build": "vite build && node scripts/copy-entry.mjs",
+    "preview:static": "vite preview",
     "test": "vitest run"
   },
   "dependencies": {
     "@ai-sdk/deepseek": "3.0.86",
     "@ai-sdk/openai-compatible": "3.0.92",
     "ai": "7.0.171",
-    "undici": "7.30.2",
+    "dexie": "4.4.7",
     "zod": "4.6.7"
   },
   "devDependencies": {
-    "@sveltejs/adapter-node": "6.0.2",
+    "@sveltejs/adapter-static": "4.0.1",
     "@sveltejs/kit": "3.2.0",
     "@sveltejs/vite-plugin-svelte": "7.0.0",
     "@types/node": "24",
