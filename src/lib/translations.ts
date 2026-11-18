@@ -6,6 +6,8 @@ export const english: Record<string, string> = {
   "本地演示": "Local demo",
   "步": "B",
   "工作台": "Dashboard",
+  "把重要的事，放在看得见的地方。": "A quiet place for what matters.",
+  "向左滑动查看更多": "Swipe to explore",
   "目标管理": "Goals",
   "目标详情": "Goal details",
   "财务概览": "Finances",

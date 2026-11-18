@@ -177,7 +177,7 @@
   #ai-settings { min-width: 0; scroll-margin-top: 82px; }
   .add-model { gap: 5px; white-space: nowrap; }
   .model-list { display: grid; gap: 8px; list-style: none; padding: 0; margin: 0; }
-  .model-list li { display: flex; align-items: center; flex-wrap: wrap; gap: 9px 12px; padding: 10px 11px; border: 1px solid var(--border); border-radius: 10px; }
+  .model-list li { display: flex; align-items: center; flex-wrap: wrap; gap: 9px 12px; padding: 12px 13px; border: 1px solid var(--border); border-radius: 16px; background: var(--glass-2); box-shadow: inset 0 1px 0 var(--glass-edge); }
   .model-list li.active { border-color: var(--primary); }
   .model-info { flex: 1 1 140px; min-width: 0; display: grid; gap: 2px; overflow-wrap: anywhere; }
   .model-info > div { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
@@ -188,7 +188,7 @@
   .row-actions { margin-inline-start: auto; }
   .row-actions .button { min-height: 34px; padding: 4px 8px; font-size: 12px; }
   .remove-model { color: var(--negative); }
-  .model-editor { margin-top: 14px; padding: 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--base); }
+  .model-editor { margin-top: 16px; padding: 16px; border: 1px solid var(--border); border-radius: 18px; background: var(--glass-2); }
   .model-editor .button { min-width: auto; }
   .model-editor h3 { font-size: 14px; }
   .delete-copy { margin-bottom: 8px; }

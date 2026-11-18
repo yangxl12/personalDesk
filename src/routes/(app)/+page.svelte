@@ -2,6 +2,7 @@
   import { goto } from '$app/navigation'
   import { page } from '$app/state'
   import { useUi } from '#lib/ui.svelte'
+  import { money } from '#lib/contracts/workspace'
   import { createNote, editTransaction } from '#lib/editors'
   import EmptyArt from '#lib/components/EmptyArt.svelte'
   import Icon from '#lib/components/Icon.svelte'
@@ -13,6 +14,7 @@
   let { data } = $props()
   const ui = useUi()
   let dashboard = $derived(data.dashboard)
+  let balanceTone = $derived(Number(dashboard.totals.balance) < 0 ? 'expense' : 'income')
   let ledger = $state<string | null>(null)
   // 非响应式游标，避免同一 ?month= 深链关闭弹窗后被反复打开。
   let linked = ''
@@ -39,11 +41,30 @@
 </script>
 
 <div class="dashboard-grid">
+  <header class="dashboard-hero">
+    <div>
+      <span class="eyebrow">{ui.date(Date.now())}</span>
+      <h1>{ui.t('工作台')}</h1>
+      <p class="hero-sub">{ui.t('把重要的事，放在看得见的地方。')}</p>
+    </div>
+    <div class="hero-metrics">
+      <div class="hero-metric"><span>{ui.t('全部目标')}</span><strong>{String(dashboard.goals.length).padStart(2, '0')}</strong></div>
+      <div class="hero-metric"><span>{ui.t('结余')}</span><strong class={balanceTone}>{money(dashboard.totals.balance)}</strong></div>
+      <div class="hero-metric"><span>{ui.t('全部记录')}</span><strong>{String(dashboard.notes.length).padStart(2, '0')}</strong></div>
+    </div>
+  </header>
+
+  <div class="board-head">
+    <span class="eyebrow">{ui.t('目标管理')}</span>
+    <span class="board-hint">{ui.t('向左滑动查看更多')}</span>
+  </div>
+
   <GoalCards goals={dashboard.goals} />
 
   <section class="card finance-card">
     <header class="section-head">
       <h2>
+        <span class="section-index">01</span>
         <span class="section-icon"><Icon name="finance" /></span>{ui.t('财务')}
         <small class="finance-month">{dashboard.month}</small>
       </h2>
@@ -61,13 +82,18 @@
   </section>
 
   <section class="card notes-card" aria-label={ui.t('思考记录')}>
-    <div class="notes-toolbar">
-      <button type="button" class="button icon-button" aria-label={ui.t('新建思考')} onclick={() => createNote(ui)}><Icon name="plus" size={18} /></button>
-    </div>
+    <header class="section-head">
+      <h2><span class="section-index">02</span><span class="section-icon"><Icon name="notes" /></span>{ui.t('思考记录')}</h2>
+      <div class="section-actions">
+        <span class="section-count">{String(dashboard.notes.length).padStart(2, '0')}</span>
+        <button type="button" class="button icon-button" aria-label={ui.t('新建思考')} onclick={() => createNote(ui)}><Icon name="plus" size={18} /></button>
+      </div>
+    </header>
     {#if dashboard.notes.length}
       <div class="note-grid">{#each dashboard.notes as note (note.id)}<NoteCard {note} />{/each}</div>
+      <p class="notes-footnote"><Icon name="notes" size={14} />{ui.t('记录一个想法，留给之后的自己。')}</p>
     {:else}
-      <EmptyArt size={104} label={ui.t('还没有思考记录')} />
+      <EmptyArt size={112} label={ui.t('还没有思考记录')} />
     {/if}
   </section>
 </div>
