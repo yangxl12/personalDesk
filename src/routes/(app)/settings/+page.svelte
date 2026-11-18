@@ -5,6 +5,7 @@
   import { commit, refreshModules, RequestError } from '#lib/client'
   import type { Preferences } from '#lib/contracts/workspace'
   import DataSettings from '#lib/components/DataSettings.svelte'
+  import PwaSettings from '#lib/components/PwaSettings.svelte'
   import ModelSettings from '#lib/components/ModelSettings.svelte'
   import Icon from '#lib/components/Icon.svelte'
 
@@ -139,5 +140,6 @@
         <button class="button primary" type="submit" disabled={busy || !!pendingAppearance || !!current}>{ui.t('保存')}</button>
       </form>
   </section>
+  <PwaSettings />
   <DataSettings />
 </div>

@@ -4,6 +4,7 @@
   import { resolve } from '$app/paths'
   import { page } from '$app/state'
   import { provideUi } from '#lib/ui.svelte'
+  import { pwa, syncThemeColor } from '#lib/pwa.svelte'
   import Icon from '#lib/components/Icon.svelte'
   import Brand from '#lib/components/Brand.svelte'
   import Editor from '#lib/components/Editor.svelte'
@@ -76,9 +77,12 @@
   $effect(() => {
     document.documentElement.dataset.theme = data.preferences.theme
     document.documentElement.lang = data.preferences.language
+    // 主题定下来之后再同步状态栏颜色，读到的才是最终底色。
+    syncThemeColor()
   })
 
   onMount(() => {
+    pwa.init()
     const query = window.matchMedia('(max-width: 760px)')
     const resize = () => { mobile = query.matches }
     resize()

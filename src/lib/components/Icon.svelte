@@ -33,6 +33,7 @@ const paths: Record<string, string> = {
   rain: '<path d="M6 15a3.5 3.5 0 1 1 .5-7 5.5 5.5 0 0 1 10.6 1 3 3 0 0 1 .9 6m-9 2-1 3m5-3-1 3m5-3-1 3"/>',
   snow: '<path d="M12 3v18m-8-4.5 16-9m-16 0 16 9M9 4.5l3 3 3-3m-6 15 3-3 3 3M4 10.5l4-1 .5-4m7 13 .5-4 4-1M4 13.5l4 1 .5 4m7-13 .5 4 4 1"/>',
   pin: '<path d="M19 10c0 5-7 10-7 10S5 15 5 10a7 7 0 1 1 14 0Z"/><circle cx="12" cy="10" r="2.5"/>',
+  install: '<path d="M12 3.5v10m-3.6-3.6L12 13.5l3.6-3.6"/><path d="M4.5 15.5v3a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-3"/>',
 };
 
   let { name, size = 20 }: { name: string; size?: number } = $props()

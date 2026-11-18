@@ -21,7 +21,7 @@ npm run dev
 
 ### 手机访问开发环境
 
-电脑和手机连接同一 Wi-Fi 后运行 `npm run dev:lan`，在手机浏览器打开终端显示的 `Network` 地址并补上 `/personalDesk/`。此命令固定 6173 端口；端口被占用会报错。Windows 防火墙需允许当前 Wi-Fi 子网访问该端口。
+电脑和手机连接同一 Wi-Fi 后运行 `npm run dev:lan`，在手机浏览器打开终端显示的 `Network` 地址并补上 `/personalDesk/`。此命令固定 6173 端口；端口被占用会报错。Windows 防火墙需允许当前 Wi-Fi 子网访问该端口。局域网是 HTTP，不属于安全上下文，装不了 PWA——要装到手机上得用下面的构建产物经 HTTPS 访问，或先部署一次。
 
 ## 构建与预览
 
@@ -31,6 +31,16 @@ npm run preview:static
 ```
 
 产物在 `build/`：`404.html` 是应用入口（GitHub Pages 没有 SPA 重写，深链一律落到它，首屏 404 属预期），构建时额外复制一份 `index.html`，让根路径正常返回 200。本机预览地址同样带 `/personalDesk/`。
+
+## 装到桌面（PWA）
+
+站点是标准 PWA：`static/manifest.webmanifest` 声明名称、图标与 `standalone` 显示模式，`static/sw.js` 提供离线外壳。满足安装条件时（HTTPS 或 localhost）浏览器地址栏会给安装入口，应用内「设置 → 安装到桌面」是同一个入口；iOS 没有 `beforeinstallprompt`，那里给的是「分享 → 添加到主屏幕」的步骤。
+
+- **离线可用**：首次访问后应用外壳与已加载的 `_app/` 资源写入 Cache Storage，断网照样进应用改数据（数据本来就在 IndexedDB）。
+- **图标**：192 / 512 / maskable 512 / `apple-touch-icon` 180 / `favicon.ico`·`svg` 都在 `static/icons/`，由 `npm run icons` 生成。改配色只动 `scripts/generate-icons.mjs` 里的常量，重跑一次即可，不用手绘。
+- **只在构建产物里注册 Service Worker**：`vite dev` 下不注册，免得和 HMR 抢请求。验证离线要跑 `npm run build && npm run preview:static`。
+- **更新不清空旧缓存**：新 SW 装好即接管，但保留旧版本缓存——还开着的旧页面仍引用上一版 hash 资源，清掉就是白屏。
+- **状态栏配色**：`theme-color` 跟着 `--base` 走，切主题时由 `src/lib/pwa.svelte.ts` 同步，安卓状态栏不会和应用背景撞色。
 
 ## 部署到 GitHub Pages
 

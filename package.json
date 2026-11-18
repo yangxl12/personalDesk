@@ -15,6 +15,7 @@
     "dev:lan": "vite dev --host 0.0.0.0 --port 6173 --strictPort",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "build": "vite build && node scripts/copy-entry.mjs",
+    "icons": "node scripts/generate-icons.mjs",
     "preview:static": "vite preview",
     "test": "vitest run"
   },
