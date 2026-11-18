@@ -43,11 +43,7 @@
 
   <section class="card finance-card">
     <header class="section-head">
-      <h2>
-        <span class="section-index">01</span>
-        <span class="section-icon"><Icon name="finance" /></span>{ui.t('财务')}
-        <small class="finance-month">{dashboard.month}</small>
-      </h2>
+      <h2 class="sr-only">{ui.t('财务')}</h2>
       <div class="section-actions">
         <button type="button" class="button secondary ledger-button" onclick={() => { ledger = dashboard.month }}>
           <Icon name="list" size={16} />{ui.t('收支记录')}
@@ -63,9 +59,8 @@
 
   <section class="card notes-card" aria-label={ui.t('思考记录')}>
     <header class="section-head">
-      <h2><span class="section-index">02</span><span class="section-icon"><Icon name="notes" /></span>{ui.t('思考记录')}</h2>
+      <h2 class="sr-only">{ui.t('思考记录')}</h2>
       <div class="section-actions">
-        <span class="section-count">{String(dashboard.notes.length).padStart(2, '0')}</span>
         <button type="button" class="button icon-button" aria-label={ui.t('新建思考')} onclick={() => createNote(ui)}><Icon name="plus" size={18} /></button>
       </div>
     </header>

@@ -144,10 +144,6 @@
       <Brand label={ui.t('步序')} />
       <div class="topbar-actions">
         <a class="button icon-button" href="/settings" aria-label={ui.t('设置')} title={ui.t('设置')}><Icon name="settings" size={19} /></a>
-        <div class="account" title={data.user.username}>
-          <span class="avatar" aria-hidden="true">{data.user.username.slice(0, 1).toUpperCase()}</span>
-          <span class="account-name">{data.user.username}</span>
-        </div>
         <button bind:this={aiButton} class="button icon-button ai-toggle" class:active={ui.chatOpen} type="button"
           aria-label={ui.t(ui.aiRunning ? 'AI 正在生成' : 'AI 助手')} aria-expanded={ui.chatOpen} onclick={openChat}>
           <Icon name="ai" size={21} />
