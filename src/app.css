@@ -371,8 +371,11 @@ h2 { font-size: 16px; font-weight: 650; letter-spacing: -.012em; }
 .home-card { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; overflow: hidden; }
 .home-scroll {
   flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch; scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent;
+  -webkit-overflow-scrolling: touch;
+  /* 卡片内滚动：滑块浮在内容上很难看（暗色下一块灰疙瘩），直接不画，滚轮和触摸照常 */
+  scrollbar-width: none;
 }
+.home-scroll::-webkit-scrollbar { width: 0; height: 0; }
 
 /* 底部图标栏：和右上角悬浮按钮同一套玻璃质感 */
 .home-dock {
@@ -417,17 +420,26 @@ h2 { font-size: 16px; font-weight: 650; letter-spacing: -.012em; }
 .finance-period { display: flex; align-items: center; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap; margin-bottom: 14px; }
 .period-nav { display: flex; align-items: center; gap: 2px; }
 .period-step { width: 30px; min-height: 30px; border-radius: 9px; }
-.period-value { display: flex; justify-content: center; min-width: 8.2em; }
-.period-value input {
-  width: 100%; min-width: 0; padding: 3px 2px; border: 0; border-radius: 8px;
+/* 时段文字自己排（原生控件的文字会被窄卡片截掉半截），原生控件只作透明交互层 */
+.period-value {
+  position: relative; display: flex; align-items: center; justify-content: center; gap: 1px;
+  padding: 3px 4px; border-radius: 8px;
+  font-size: 15px; font-weight: 650; line-height: 1.3; white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  transition: box-shadow .2s;
+}
+.period-value:focus-within { box-shadow: 0 0 0 3px var(--primary-soft); }
+.period-unit { color: var(--muted); font-size: 13px; font-weight: 600; }
+.period-input {
+  min-width: 0; padding: 0; border: 0; border-radius: 8px;
   color: var(--ink); background: none; font: inherit; font-weight: 650; font-size: 15px;
   text-align: center; font-variant-numeric: tabular-nums;
 }
-.period-value input:focus { outline: none; box-shadow: 0 0 0 3px var(--primary-soft); }
-.period-value input::-webkit-calendar-picker-indicator { opacity: .38; cursor: pointer; transition: opacity .2s; }
-.period-value input::-webkit-calendar-picker-indicator:hover { opacity: .8; }
-[data-theme="dark"] .period-value input::-webkit-calendar-picker-indicator { filter: invert(1); }
-.period-value input::-webkit-inner-spin-button { display: none; }
+.period-input:focus { outline: none; }
+.period-input.year { width: 2.35em; }
+.period-input::-webkit-inner-spin-button, .period-input::-webkit-outer-spin-button { display: none; }
+/* 铺满整块文字区域的透明原生控件：点哪里都能唤起系统日期选择器 */
+.period-input.picker { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
 .period-scopes { display: flex; gap: 2px; padding: 2px; border: 1px solid var(--line); border-radius: 11px; background: var(--glass-2); }
 .period-scopes button {
   min-height: 26px; padding: 0 10px; border: 0; border-radius: 8px; background: none;
@@ -593,6 +605,8 @@ h2 { font-size: 16px; font-weight: 650; letter-spacing: -.012em; }
   position: absolute; z-index: 2; bottom: 20px; right: calc(var(--pad) + 20px);
   display: grid; place-items: center; width: 54px; height: 54px; padding: 0;
   border: 1px solid transparent; border-radius: 50%;
+  /* 光扫伪元素靠 translateX 滑到按钮外，不裁的话会有一条灰光带露在按钮左边 */
+  overflow: hidden;
   color: #fff; background: linear-gradient(135deg, var(--primary-fill), var(--primary-2));
   box-shadow: 0 18px 32px -14px var(--primary), 0 6px 14px -8px rgba(30, 20, 70, .45), inset 0 1px 0 rgba(255, 255, 255, .42);
   transition: transform .35s var(--ease), box-shadow .4s var(--ease);
@@ -1018,10 +1032,10 @@ body:has(.home-dock) .toast { bottom: calc(76px + env(safe-area-inset-bottom, 0p
   .card.settings-panel { padding: 0; }
   .settings-block { padding: 18px; }
   .section-actions { gap: 6px; }
-  /* 窄屏把筛选行收紧，箭头、月份和年/月/日仍然排在一行 */
+  /* 窄屏把筛选行收紧，箭头、月份和年/月/日仍然排在一行；时段文字按内容撑开，不许再被压掉 */
   .finance-period { gap: 8px; flex-wrap: nowrap; }
-  .period-nav { flex: 1 1 auto; min-width: 0; }
-  .period-value { min-width: 0; flex: 1 1 auto; }
+  .period-nav { flex: 1 1 auto; min-width: 0; justify-content: center; }
+  .period-value { flex: 0 1 auto; font-size: 14px; }
   .period-step { width: 26px; min-height: 26px; }
   .period-scopes { flex: none; }
   .period-scopes button { padding: 0 8px; }

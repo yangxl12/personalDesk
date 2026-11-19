@@ -43,6 +43,26 @@
   let year = $derived(split(anchor)[0])
   let monthValue = $derived(anchor.slice(0, 7))
 
+  // 原生日期控件的文字在窄卡片里会被压掉一半（"2026年11月" 显示成 "2026年1"），
+  // 所以时段文字自己排，原生控件只当透明的交互层，点击仍然弹系统选择器。
+  let label = $derived.by(() => {
+    const [y, m, d] = split(anchor)
+    const style: Intl.DateTimeFormatOptions = scope === 'year'
+      ? { year: 'numeric' }
+      : scope === 'month'
+        ? { year: 'numeric', month: 'short' }
+        : { year: 'numeric', month: 'short', day: 'numeric' }
+    return new Intl.DateTimeFormat(ui.preferences.language === 'en' ? 'en-US' : 'zh-CN', { ...style, timeZone: 'UTC' })
+      .format(new Date(`${y}-${pad(m)}-${pad(d)}T00:00:00Z`))
+  })
+
+  // 点击透明控件时主动唤起选择器：直接点文字区域浏览器只会聚焦，不会展开日历。
+  function openPicker(event: MouseEvent) {
+    const input = event.currentTarget as HTMLInputElement & { showPicker?: () => void }
+    if (typeof input.showPicker !== 'function') return
+    try { input.showPicker() } catch { /* 浏览器拦截或不支持时退回原生聚焦 */ }
+  }
+
   async function load(from: string, to: string) {
     const token = ++sequence
     items = []
@@ -85,9 +105,13 @@
   })
 
   // 记账日期落在筛选范围之外时自动切到那个月，避免刚存下的这笔看不见。
+  // 只处理新的 jump：否则用户切到「日」时 range 变成单日，深链留下的 jump 又会把它弹回「月」。
+  let applied = ''
   $effect(() => {
     const target = jump?.date
-    if (!target || (target >= range.from && target <= range.to)) return
+    if (!target || target === applied) return
+    applied = target
+    if (target >= range.from && target <= range.to) return
     scope = 'month'
     anchor = target
   })
@@ -151,11 +175,15 @@
     <button type="button" class="button icon-button period-step" aria-label={ui.t('上一段时间')} onclick={() => shift(-1)}><Icon name="chevronLeft" size={16} /></button>
     <span class="period-value">
       {#if scope === 'year'}
-        <input type="number" min="1000" max="9999" step="1" value={year} aria-label={ui.t('年份')} onchange={setYear}>
-      {:else if scope === 'month'}
-        <input type="month" value={monthValue} aria-label={ui.t('月份')} onchange={setMonth}>
+        <input class="period-input year" type="number" min="1000" max="9999" step="1" value={year} aria-label={ui.t('年份')} onchange={setYear}>
+        {#if ui.preferences.language !== 'en'}<span class="period-unit">{ui.t('年')}</span>{/if}
       {:else}
-        <input type="date" value={anchor} aria-label={ui.t('日期')} onchange={setDay}>
+        <span class="period-label">{label}</span>
+        <input class="period-input picker" type={scope === 'month' ? 'month' : 'date'}
+          value={scope === 'month' ? monthValue : anchor}
+          aria-label={scope === 'month' ? ui.t('月份') : ui.t('日期')}
+          onchange={scope === 'month' ? setMonth : setDay}
+          onclick={openPicker}>
       {/if}
     </span>
     <button type="button" class="button icon-button period-step" aria-label={ui.t('下一段时间')} onclick={() => shift(1)}><Icon name="chevron" size={16} /></button>
