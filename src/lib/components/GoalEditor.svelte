@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount, untrack } from 'svelte'
+  import { onMount, tick, untrack } from 'svelte'
   import { commit, refreshModules, request } from '#lib/client'
   import type { DashboardGoal, Goal, GoalTask, Revisions } from '#lib/contracts/workspace'
   import { randomId } from '#lib/random-id'
@@ -7,18 +7,32 @@
   import { useUi } from '#lib/ui.svelte'
   import Icon from './Icon.svelte'
 
+  // 弹窗里任务是本地草稿：id 为空的等保存时新建，改过的按原版本提交，删掉的行记账后统一删除。
+  type Draft = {
+    key: string; id: string | null; title: string; done: boolean; version: number
+    savedTitle: string; savedDone: boolean
+  }
+
   // 新建和编辑共用同一个弹窗：传 goal 就是编辑，不传就是新建。
   let { goal = null, onclose }: { goal?: DashboardGoal | null; onclose: () => void } = $props()
   const ui = useUi()
   let dialog: HTMLDialogElement
   let input = $state<HTMLInputElement>()
+  let list = $state<HTMLElement>()
   let title = $state(untrack(() => goal?.title ?? ''))
-  let tasks = $state<GoalTask[]>([])
-  let selected = $state<string[]>([])
+  let rows = $state<Draft[]>([])
   let loading = $state(untrack(() => !!goal))
   let busy = $state(false)
   let message = $state('')
-  let confirming = $state<'goal' | 'tasks' | null>(null)
+  let confirming = $state(false)
+  // 已落库、待删除的任务：id → 版本号。
+  let removed = $state<Record<string, number>>({})
+
+  let dirty = $derived(!!goal && (
+    title.trim() !== goal.title ||
+    Object.keys(removed).length > 0 ||
+    rows.some(row => row.title.trim() !== row.savedTitle || row.done !== row.savedDone)
+  ))
 
   onMount(() => {
     dialog.showModal()
@@ -33,7 +47,12 @@
     if (!id) return
     loading = true
     try {
-      tasks = (await request<GoalTask[]>('/goals/' + id + '/tasks')).data
+      const tasks = (await request<GoalTask[]>('/goals/' + id + '/tasks')).data
+      rows = tasks.map(task => ({
+        key: task.id, id: task.id, title: task.title, done: !!task.done, version: task.version,
+        savedTitle: task.title, savedDone: !!task.done
+      }))
+      removed = {}
     } catch (failure) {
       message = ui.error(failure)
     } finally {
@@ -41,65 +60,92 @@
     }
   }
 
-  function toggle(id: string) {
-    selected = selected.includes(id) ? selected.filter(value => value !== id) : [...selected, id]
+  async function addRow() {
+    rows = [...rows, {
+      key: randomId(), id: null, title: '', done: false, version: 0, savedTitle: '', savedDone: false
+    }]
+    await tick()
+    const fields = list?.querySelectorAll<HTMLInputElement>('input.goal-task-input')
+    fields?.[fields.length - 1]?.focus()
+    if (list) list.scrollTop = list.scrollHeight
   }
 
-  async function removeTasks(ids: string[]) {
-    const revisions: Revisions = {}
-    for (const task of tasks.filter(item => ids.includes(item.id))) {
-      const result = await commit('DELETE', '/tasks/' + task.id, { version: task.version }, randomId())
-      if (result.revisions) Object.assign(revisions, result.revisions)
+  function removeRow(row: Draft) {
+    if (row.id) removed = { ...removed, [row.id]: row.version }
+    rows = rows.filter(item => item.key !== row.key)
+  }
+
+  async function deleteTask(id: string, version: number, revisions: Revisions) {
+    const result = await commit('DELETE', '/tasks/' + id, { version }, randomId())
+    if (result.revisions) Object.assign(revisions, result.revisions)
+  }
+
+  // 把草稿同步到库里：新建的 POST，改过的 PATCH，删掉的 DELETE。
+  async function syncTasks(goalId: string, revisions: Revisions) {
+    for (const [id, version] of Object.entries(removed)) await deleteTask(id, version, revisions)
+    removed = {}
+    for (const row of rows) {
+      const name = row.title.trim()
+      if (!name) {
+        // 名字被清空等于删掉这条任务。
+        if (row.id) await deleteTask(row.id, row.version, revisions)
+        continue
+      }
+      if (!row.id) {
+        const created = await commit<GoalTask>('POST', '/goals/' + goalId + '/tasks', { title: name }, randomId())
+        if (created.revisions) Object.assign(revisions, created.revisions)
+        if (row.done) {
+          const marked = await commit('PATCH', '/tasks/' + created.data.id, { done: true, version: created.data.version }, randomId())
+          if (marked.revisions) Object.assign(revisions, marked.revisions)
+        }
+        continue
+      }
+      const body: { title?: string; done?: boolean; version: number } = { version: row.version }
+      if (name !== row.savedTitle) body.title = name
+      if (row.done !== row.savedDone) body.done = row.done
+      if (body.title === undefined && body.done === undefined) continue
+      const patched = await commit('PATCH', '/tasks/' + row.id, body, randomId())
+      if (patched.revisions) Object.assign(revisions, patched.revisions)
     }
-    await refreshModules(revisions)
-    tasks = tasks.filter(task => !ids.includes(task.id))
-    selected = []
   }
 
   async function save(event: SubmitEvent) {
     event.preventDefault()
     if (busy) return
     const next = title.trim()
-    if (goal && next === goal.title && !selected.length) {
+    if (!next) return
+    if (goal && !dirty) {
       onclose()
       return
     }
     busy = true
     message = ''
+    const revisions: Revisions = {}
     try {
-      if (!goal) {
+      const current = goal
+      let goalId: string
+      if (!current) {
         const created = await commit<Goal>('POST', '/goals', { title: next, description: '', tone: 'violet' }, randomId())
-        if (created.revisions) await refreshModules(created.revisions)
-        onclose()
-        ui.notify('已创建')
-        return
+        if (created.revisions) Object.assign(revisions, created.revisions)
+        goalId = created.data.id
+      } else {
+        goalId = current.id
+        if (next !== current.title) {
+          // 目标版本会随任务增删变化，保存前取最新版本，避免同一次弹窗内的连续操作互相冲突。
+          const latest = (await request<Goal>('/goals/' + goalId)).data
+          const result = await commit('PATCH', '/goals/' + goalId, {
+            title: next, description: latest.description, tone: latest.tone, version: latest.version
+          }, randomId())
+          if (result.revisions) Object.assign(revisions, result.revisions)
+        }
       }
-      // 目标版本会随任务增删变化，保存前取最新版本，避免同一次弹窗内的连续操作互相冲突。
-      const latest = (await request<Goal>('/goals/' + goal.id)).data
-      const result = await commit('PATCH', '/goals/' + goal.id, {
-        title: next, description: latest.description, tone: latest.tone, version: latest.version
-      }, randomId())
-      if (result.revisions) await refreshModules(result.revisions)
-      if (selected.length) await removeTasks(selected)
+      await syncTasks(goalId, revisions)
+      await refreshModules(revisions)
       onclose()
-      ui.notify('已保存')
+      ui.notify(ui.t(goal ? '已保存' : '已创建'))
     } catch (failure) {
       message = ui.error(failure)
-    } finally {
-      busy = false
-    }
-  }
-
-  async function deleteSelected() {
-    busy = true
-    message = ''
-    try {
-      await removeTasks(selected)
-      confirming = null
-    } catch (failure) {
-      message = ui.error(failure)
-      selected = []
-      await load()
+      if (goal) await load()
     } finally {
       busy = false
     }
@@ -115,10 +161,10 @@
       const result = await commit('DELETE', '/goals/' + id, { version: latest.version, tasks: latest.total_tasks }, randomId())
       if (result.revisions) await refreshModules(result.revisions)
       onclose()
-      ui.notify('已删除')
+      ui.notify(ui.t('已删除'))
     } catch (failure) {
       message = ui.error(failure)
-      confirming = null
+      confirming = false
     } finally {
       busy = false
     }
@@ -138,18 +184,15 @@
     </div>
     <div class="dialog-fields">
       <p class="delete-copy">
-        {confirming === 'goal'
-          ? goal?.total_tasks
-            ? ui.t('删除「{title}」及其 {tasks} 个任务？', { title: goal?.title ?? '', tasks: goal?.total_tasks ?? 0 })
-            : ui.t('删除「{title}」？', { title: goal?.title ?? '' })
-          : ui.t('删除选中的 {count} 个任务？', { count: selected.length })}
+        {goal?.total_tasks
+          ? ui.t('删除「{title}」及其 {tasks} 个任务？', { title: goal?.title ?? '', tasks: goal?.total_tasks ?? 0 })
+          : ui.t('删除「{title}」？', { title: goal?.title ?? '' })}
       </p>
       {#if message}<p class="form-error" role="alert">{message}</p>{/if}
     </div>
     <footer>
-      <button type="button" class="button secondary" disabled={busy} onclick={() => { confirming = null; message = '' }}>{ui.t('返回')}</button>
-      <button type="button" class="button danger" disabled={busy}
-        onclick={() => confirming === 'goal' ? void deleteGoal() : void deleteSelected()}>{ui.t(busy ? '正在删除…' : '确认删除')}</button>
+      <button type="button" class="button secondary" disabled={busy} onclick={() => { confirming = false; message = '' }}>{ui.t('返回')}</button>
+      <button type="button" class="button danger" disabled={busy} onclick={() => void deleteGoal()}>{ui.t(busy ? '正在删除…' : '确认删除')}</button>
     </footer>
   {:else}
     <form onsubmit={save}>
@@ -162,40 +205,38 @@
           <span>{ui.t('目标名称')}</span>
           <input bind:this={input} bind:value={title} required maxlength={120} aria-invalid={!!message}>
         </label>
-        {#if goal}
         <div class="task-picker">
           <div class="task-picker-head">
             <span>{ui.t('任务')}</span>
-            <button type="button" class="button icon-button" aria-label={ui.t('删除所选任务')} disabled={!selected.length || busy}
-              onclick={() => { confirming = 'tasks'; message = '' }}>
-              <Icon name="trash" size={16} />
-              {#if selected.length}<b class="task-picker-count">{selected.length}</b>{/if}
+            <button type="button" class="button icon-button" aria-label={ui.t('添加任务')} disabled={busy || loading} onclick={() => void addRow()}>
+              <Icon name="plus" size={16} />
             </button>
           </div>
           {#if loading}
             <p class="task-picker-empty">{ui.t('加载中…')}</p>
-          {:else if !tasks.length}
-            <p class="task-picker-empty">{ui.t('暂无任务')}</p>
+          {:else if !rows.length}
+            <p class="task-picker-empty">{ui.t('暂无任务，点右上角添加。')}</p>
           {:else}
-            <ul class="task-picker-list">
-              {#each tasks as task (task.id)}
-                <li>
-                  <label class="task-picker-row">
-                    <input type="checkbox" checked={selected.includes(task.id)} onchange={() => toggle(task.id)}>
-                    <span class:done={!!task.done}>{task.title}</span>
-                  </label>
+            <ul class="task-picker-list" bind:this={list}>
+              {#each rows as row (row.key)}
+                <li class="task-picker-row">
+                  <input type="checkbox" checked={row.done} aria-label={ui.t('标记完成')}
+                    onchange={(event) => { row.done = event.currentTarget.checked }}>
+                  <input class="goal-task-input" class:done={row.done} bind:value={row.title}
+                    maxlength={120} placeholder={ui.t('任务名称')} aria-label={ui.t('任务名称')}>
+                  <button type="button" class="button icon-button goal-task-remove" aria-label={ui.t('删除任务')}
+                    onclick={() => removeRow(row)}><Icon name="trash" size={15} /></button>
                 </li>
               {/each}
             </ul>
           {/if}
         </div>
-        {/if}
         {#if message}<p class="form-error" role="alert">{message}</p>{/if}
       </div>
       <footer>
         {#if goal}
           <button type="button" class="button icon-button footer-delete" aria-label={ui.t('删除目标')} disabled={busy}
-            onclick={() => { confirming = 'goal'; message = '' }}><Icon name="trash" size={17} /></button>
+            onclick={() => { confirming = true; message = '' }}><Icon name="trash" size={17} /></button>
         {/if}
         <button type="button" class="button secondary" disabled={busy} onclick={onclose}>{ui.t('取消')}</button>
         <button type="submit" class="button primary" disabled={busy}>{ui.t(busy ? '正在保存…' : '保存')}</button>

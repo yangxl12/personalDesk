@@ -13,7 +13,7 @@ const state = z.enum(['queued', 'running', 'completed', 'failed', 'cancelled', '
 const goal = z.object({
   id: z.uuid(), title: z.string().max(120), description: z.string().max(4000), tone,
   total_tasks: z.number().int().nonnegative(), done_tasks: z.number().int().nonnegative(),
-  updated_at: stamp, version: z.number().int().positive()
+  created_at: stamp.optional(), updated_at: stamp, version: z.number().int().positive()
 })
 const item = z.object({
   id: z.uuid(), goal_id: z.uuid(), title: z.string().max(120),

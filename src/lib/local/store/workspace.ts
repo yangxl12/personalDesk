@@ -187,13 +187,16 @@ async function tasksByGoal(goalIds: string[]) {
 const brief = (task: TaskRow): TaskBrief => ({ id: task.id, title: task.title, done: task.done, version: task.version })
 const summaryOf = ({ body: _body, ...rest }: NoteRow): NoteSummary => rest
 
+// 导入的旧备份可能没有 created_at，用 updated_at 兜底。
+const createdAt = (row: GoalRow) => row.created_at > 0 ? row.created_at : row.updated_at
+
 export async function dashboard(): Promise<Dashboard> {
   await openDb()
   const settings = await preferences()
   const month = accountMonth(settings.timezone)
-  // 未完成的目标排前面，其次按最近更新；与 SQL 的 ORDER BY done, updated_at DESC, id DESC 一致。
+  // 目标卡片按创建顺序排列：新建的目标永远追加在最后，编辑标题不会改变位置。
   const goals = (await db.goals.toArray()).sort((left, right) =>
-    Number(isDone(left)) - Number(isDone(right)) || descByTime<GoalRow>(row => row.updated_at)(left, right))
+    createdAt(left) - createdAt(right) || (left.id < right.id ? -1 : left.id > right.id ? 1 : 0))
   const grouped = await tasksByGoal(goals.map(goal => goal.id))
   const plan = (goal: GoalRow): GoalPlan => ({
     tasks: (grouped.get(goal.id) ?? []).slice(0, OUTLINE_TASKS).map(brief),
@@ -314,7 +317,7 @@ async function execute(operation: Operation, ref: string | null, input: unknown,
       const value = input as typeof inputs.goalCreate._output
       const row: GoalRow = {
         id: randomId(), title: value.title, description: value.description, tone: value.tone,
-        total_tasks: 0, done_tasks: 0, updated_at: now, version: 1
+        total_tasks: 0, done_tasks: 0, created_at: now, updated_at: now, version: 1
       }
       await db.goals.put(row)
       return row

@@ -795,23 +795,34 @@ dialog[open]::backdrop { animation: fade-in .38s both; }
 .task-picker { display: grid; gap: 9px; }
 .task-picker-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .task-picker-head > span { font-weight: 600; font-size: 13px; }
-.task-picker-head .icon-button { position: relative; width: 32px; min-height: 32px; }
-.task-picker-count {
-  position: absolute; top: -3px; right: -3px; min-width: 17px; padding: 0 4px;
-  border-radius: 999px; background: var(--primary-fill); color: #fff;
-  font-size: 10px; line-height: 17px; font-variant-numeric: tabular-nums;
-}
+.task-picker-head .icon-button { width: 32px; min-height: 32px; }
 .task-picker-list {
   display: grid; gap: 2px; max-height: 220px; overflow-y: auto; scrollbar-width: thin;
   overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
   margin: 0; padding: 6px; list-style: none;
   background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
 }
-.task-picker-row { display: flex; align-items: center; gap: 11px; padding: 9px 10px; border-radius: 10px; cursor: pointer; font-weight: 400; transition: background-color .2s; }
-.task-picker-row:hover { background: var(--primary-soft); }
-.task-picker-row input { flex: none; width: 17px; height: 17px; margin: 0; accent-color: var(--primary-fill); cursor: pointer; }
-.task-picker-row span { min-width: 0; line-height: 1.5; overflow-wrap: anywhere; }
-.task-picker-row span.done { color: var(--muted); text-decoration: line-through; }
+.task-picker-row { display: flex; align-items: center; gap: 6px; padding: 3px 4px; border-radius: 10px; font-weight: 400; transition: background-color .2s; }
+.task-picker-row:hover, .task-picker-row:focus-within { background: var(--primary-soft); }
+.task-picker-row > input[type="checkbox"] {
+  flex: none; width: 17px; height: 17px; margin: 0 3px; accent-color: var(--primary-fill); cursor: pointer;
+}
+/* 任务标题就地编辑：平时像文本，聚焦才露边框，避免整排都是输入框。 */
+.goal-task-input {
+  flex: 1; min-width: 0; padding: 7px 8px;
+  border: 1px solid transparent; border-radius: 9px;
+  color: var(--ink); background: transparent; font: inherit; font-weight: 400; line-height: 1.5;
+  transition: border-color .25s, background-color .25s, box-shadow .25s;
+}
+.goal-task-input::placeholder { color: var(--faint); }
+.goal-task-input:hover { border-color: var(--line); background: var(--dialog-bg); }
+.goal-task-input:focus {
+  outline: none; border-color: var(--primary); background: var(--dialog-bg);
+  box-shadow: 0 0 0 3px var(--primary-soft);
+}
+.goal-task-input.done { color: var(--muted); text-decoration: line-through; }
+.goal-task-remove { flex: none; width: 30px; min-height: 30px; color: var(--faint); opacity: .8; }
+.goal-task-remove:hover { color: var(--negative); background: var(--negative-soft); opacity: 1; }
 .task-picker-empty { padding: 12px 10px; color: var(--muted); font-size: 13px; }
 .footer-delete { margin-right: auto; color: var(--negative); }
 .footer-delete:hover { background: var(--negative-soft); }

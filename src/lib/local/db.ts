@@ -12,6 +12,8 @@ export type GoalRow = {
   tone: Tone
   total_tasks: number
   done_tasks: number
+  // 卡片顺序按创建时间固定，编辑标题不会让目标跳到别的位置。
+  created_at: number
   updated_at: number
   version: number
 }
@@ -149,6 +151,23 @@ class BuxuDatabase extends Dexie {
       proposals: 'id, run_id, status',
       meta: 'key'
     })
+    // 目标加了 created_at：老数据用它原来的 updated_at 兜底，卡片顺序不至于全乱。
+    this.version(2).stores({
+      goals: 'id, updated_at, created_at, title',
+      items: 'id, goal_id, [goal_id+created_at]',
+      tasks: 'id, item_id, [item_id+created_at]',
+      notes: 'id, updated_at, created_at',
+      transactions: 'id, occurred_on, [occurred_on+id]',
+      savings: 'id',
+      preferences: 'id',
+      models: 'ref, provider',
+      chats: 'id, updated_at',
+      messages: 'id, conversation_id, &[conversation_id+seq], created_at',
+      proposals: 'id, run_id, status',
+      meta: 'key'
+    }).upgrade(tx => tx.table('goals').toCollection().modify((row: GoalRow) => {
+      if (typeof row.created_at !== 'number') row.created_at = row.updated_at
+    }))
   }
 }
 
