@@ -580,6 +580,40 @@ h2 { font-size: 16px; font-weight: 650; letter-spacing: -.012em; }
 
 .finance-card { grid-column: 1 / -1; }
 
+/* 记一笔：卡片右下角的悬浮按钮，收支列表滚动时始终停在原位。
+   按钮挂在 slide 上（不是卡片里），卡片的 overflow:hidden 才不会把它的阴影切掉 */
+.finance-slide { position: relative; }
+.finance-fab {
+  position: absolute; z-index: 2; bottom: 20px; right: calc(var(--pad) + 20px);
+  display: grid; place-items: center; width: 54px; height: 54px; padding: 0;
+  border: 1px solid transparent; border-radius: 50%;
+  color: #fff; background: linear-gradient(135deg, var(--primary-fill), var(--primary-2));
+  box-shadow: 0 18px 32px -14px var(--primary), 0 6px 14px -8px rgba(30, 20, 70, .45), inset 0 1px 0 rgba(255, 255, 255, .42);
+  transition: transform .35s var(--ease), box-shadow .4s var(--ease);
+}
+.finance-fab svg { position: relative; z-index: 1; transition: transform .45s var(--ease); }
+/* 和主按钮同一道光扫过，hover 时提示可点 */
+.finance-fab::after {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: linear-gradient(105deg, transparent 34%, rgba(255, 255, 255, .34) 50%, transparent 66%);
+  transform: translateX(-130%); transition: transform .8s var(--ease);
+}
+.finance-fab:hover {
+  transform: translateY(-3px) scale(1.05);
+  box-shadow: 0 24px 40px -14px var(--primary), 0 8px 16px -8px rgba(30, 20, 70, .45), inset 0 1px 0 rgba(255, 255, 255, .46);
+}
+.finance-fab:hover::after { transform: translateX(130%); }
+.finance-fab:hover svg { transform: scale(1.12); }
+.finance-fab:active { transform: scale(.94); }
+/* 给按钮留出落脚的空，滚到底时最后一笔不会被压住 */
+.finance-card .home-scroll { padding-bottom: 64px; }
+/* 切到财务面板时按钮轻轻弹出来 */
+.home-slide.current .finance-fab { animation: fab-in .5s var(--ease) both; }
+@keyframes fab-in {
+  from { opacity: 0; translate: 0 12px; scale: .7; }
+  to { opacity: 1; translate: 0 0; scale: 1; }
+}
+
 .violet { --tone: #6352d6; --tone-soft: var(--primary-soft); }
 .mint { --tone: #16866b; --tone-soft: var(--positive-soft); }
 .amber { --tone: #a2651c; --tone-soft: rgba(200, 140, 60, .12); }
@@ -964,6 +998,9 @@ body:has(.home-dock) .toast { bottom: calc(76px + env(safe-area-inset-bottom, 0p
   .period-step { width: 26px; min-height: 26px; }
   .period-scopes { flex: none; }
   .period-scopes button { padding: 0 8px; }
+  /* 卡片内边距收窄后，悬浮按钮跟着贴边一些 */
+  .finance-fab { right: calc(var(--pad) + 16px); bottom: 16px; width: 50px; height: 50px; }
+  .finance-card .home-scroll { padding-bottom: 58px; }
 }
 
 @media (min-width: 761px) {

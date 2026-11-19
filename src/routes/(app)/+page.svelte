@@ -90,14 +90,8 @@
       </section>
     </div>
 
-    <div class="home-slide" inert={section !== 'finance'} aria-hidden={section !== 'finance'}>
+    <div class="home-slide finance-slide" class:current={section === 'finance'} inert={section !== 'finance'} aria-hidden={section !== 'finance'}>
       <section class="card finance-card home-card" aria-label={ui.t('财务')}>
-        <header class="section-head">
-          <h2 class="sr-only">{ui.t('财务')}</h2>
-          <div class="section-actions">
-            <button type="button" class="button icon-button" aria-label={ui.t('记一笔')} onclick={() => editTransaction(ui, undefined, afterRecord)}><Icon name="plus" size={18} /></button>
-          </div>
-        </header>
         <div class="home-scroll">
           <Savings savings={dashboard.savings} />
           <section class="finance-ledger" aria-label={ui.t('收支记录')}>
@@ -105,6 +99,9 @@
           </section>
         </div>
       </section>
+      <button type="button" class="finance-fab" aria-label={ui.t('记一笔')} onclick={() => editTransaction(ui, undefined, afterRecord)}>
+        <Icon name="plus" size={24} />
+      </button>
     </div>
   </div>
 </div>
