@@ -119,6 +119,8 @@ export const english: Record<string, string> = {
   "删除{name}": "Delete {name}",
   "删除目标": "Delete goal",
   "删除任务": "Delete task",
+  "删除全部任务": "Delete all tasks",
+  "已清空 {count} 个任务，保存后生效。": "Cleared {count} tasks. Applied on save.",
   "删除记录": "Delete note",
   "删除收支": "Delete entry",
   "删除会话": "Delete chat",

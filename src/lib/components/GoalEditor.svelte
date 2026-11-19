@@ -24,6 +24,8 @@
   let loading = $state(untrack(() => !!goal))
   let busy = $state(false)
   let message = $state('')
+  // 批量清空后的一次性提示：列表空了也要让用户知道刚才发生了什么。
+  let notice = $state('')
   let confirming = $state(false)
   // 已落库、待删除的任务：id → 版本号。
   let removed = $state<Record<string, number>>({})
@@ -53,6 +55,7 @@
         savedTitle: task.title, savedDone: !!task.done
       }))
       removed = {}
+      notice = ''
     } catch (failure) {
       message = ui.error(failure)
     } finally {
@@ -64,6 +67,7 @@
     rows = [...rows, {
       key: randomId(), id: null, title: '', done: false, version: 0, savedTitle: '', savedDone: false
     }]
+    notice = ''
     await tick()
     const fields = list?.querySelectorAll<HTMLInputElement>('input.goal-task-input')
     fields?.[fields.length - 1]?.focus()
@@ -73,6 +77,17 @@
   function removeRow(row: Draft) {
     if (row.id) removed = { ...removed, [row.id]: row.version }
     rows = rows.filter(item => item.key !== row.key)
+  }
+
+  // 批量清空：整批记进待删除，保存时统一落库；直接取消弹窗则原样丢弃，不留半截数据。
+  function clearRows() {
+    const count = rows.length
+    if (!count) return
+    const next = { ...removed }
+    for (const row of rows) if (row.id) next[row.id] = row.version
+    removed = next
+    rows = []
+    notice = ui.t('已清空 {count} 个任务，保存后生效。', { count })
   }
 
   async function deleteTask(id: string, version: number, revisions: Revisions) {
@@ -208,14 +223,20 @@
         <div class="task-picker">
           <div class="task-picker-head">
             <span>{ui.t('任务')}</span>
-            <button type="button" class="button icon-button" aria-label={ui.t('添加任务')} disabled={busy || loading} onclick={() => void addRow()}>
-              <Icon name="plus" size={16} />
-            </button>
+            <div class="task-picker-tools">
+              <button type="button" class="button icon-button task-picker-clear" aria-label={ui.t('删除全部任务')}
+                title={ui.t('删除全部任务')} disabled={busy || loading || !rows.length} onclick={clearRows}>
+                <Icon name="trash" size={16} />
+              </button>
+              <button type="button" class="button icon-button" aria-label={ui.t('添加任务')} disabled={busy || loading} onclick={() => void addRow()}>
+                <Icon name="plus" size={16} />
+              </button>
+            </div>
           </div>
           {#if loading}
             <p class="task-picker-empty">{ui.t('加载中…')}</p>
           {:else if !rows.length}
-            <p class="task-picker-empty">{ui.t('暂无任务，点右上角添加。')}</p>
+            <p class="task-picker-empty" role="status">{notice || ui.t('暂无任务，点右上角添加。')}</p>
           {:else}
             <ul class="task-picker-list" bind:this={list}>
               {#each rows as row (row.key)}

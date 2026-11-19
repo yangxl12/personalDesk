@@ -801,7 +801,10 @@ dialog[open]::backdrop { animation: fade-in .38s both; }
 .task-picker { display: grid; gap: 9px; }
 .task-picker-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .task-picker-head > span { font-weight: 600; font-size: 13px; }
-.task-picker-head .icon-button { width: 32px; min-height: 32px; }
+.task-picker-tools { display: flex; align-items: center; gap: 2px; }
+.task-picker-head .icon-button { width: 32px; min-height: 32px; border-radius: 10px; color: var(--muted); }
+.task-picker-head .icon-button:hover:not(:disabled) { color: var(--primary); background: var(--primary-soft); }
+.task-picker-head .task-picker-clear:hover:not(:disabled) { color: var(--negative); background: var(--negative-soft); }
 .task-picker-list {
   display: grid; gap: 2px; max-height: 220px; overflow-y: auto; scrollbar-width: thin;
   overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
