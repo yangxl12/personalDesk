@@ -48,14 +48,17 @@ export async function chat(id: string): Promise<Chat> {
 export async function messages(id: string, limit: number, before: number) {
   await openDb()
   const header = await chat(id)
-  const rows = (await db.messages.where('conversation_id').equals(id).toArray())
-    .filter(message => message.seq < before)
-    .sort((left, right) => right.seq - left.seq)
-  const page = rows.slice(0, limit)
+  // 直接走 [conversation_id+seq] 复合索引倒序取一页：不再把整个会话的消息全量读出来排序。
+  const rows = await db.messages.where('[conversation_id+seq]')
+    .between([id, 0], [id, before], true, false)
+    .reverse()
+    .limit(limit + 1)
+    .toArray()
   const more = rows.length > limit
-  const proposals = await db.proposals.filter(proposal => proposal.conversation_id === id).toArray()
+  const page = (more ? rows.slice(0, limit) : rows).reverse()
+  const proposals = await db.proposals.where('conversation_id').equals(id).toArray()
   const byRun = new Map(proposals.map(proposal => [proposal.run_id, proposal.id]))
-  const items: Message[] = page.reverse().map(row => ({
+  const items: Message[] = page.map(row => ({
     id: row.id, role: row.role, text: row.text, state: row.state, created_at: row.created_at,
     runId: row.run_id, errorCode: row.error_code, sources: sources(row.sources),
     proposalId: row.run_id ? byRun.get(row.run_id) ?? null : null
@@ -64,22 +67,35 @@ export async function messages(id: string, limit: number, before: number) {
 }
 
 async function nextSeq(conversationId: string) {
-  const rows = await db.messages.where('conversation_id').equals(conversationId).toArray()
-  return rows.reduce((max, row) => Math.max(max, row.seq), 0) + 1
+  // 索引上直接取最大 seq：新消息只追加了更小的结果，不必读全表。
+  const last = await db.messages.where('[conversation_id+seq]')
+    .between([conversationId, 0], [conversationId, Infinity], true, false)
+    .last()
+  return (last?.seq ?? 0) + 1
 }
 
 async function latestAssistant(conversationId: string) {
-  const rows = (await db.messages.where('conversation_id').equals(conversationId).toArray())
+  return db.messages.where('[conversation_id+seq]')
+    .between([conversationId, 0], [conversationId, Infinity], true, false)
+    .reverse()
     .filter(row => row.role === 'assistant')
-    .sort((left, right) => right.seq - left.seq)
-  return rows[0]
+    .first()
+}
+
+// 会话里 seq 之前最近的一条用户消息：倒序走索引，遇到第一条就停。
+function previousUser(conversationId: string, seq: number) {
+  return db.messages.where('[conversation_id+seq]')
+    .between([conversationId, 0], [conversationId, seq], true, false)
+    .reverse()
+    .filter(row => row.role === 'user')
+    .first()
 }
 
 export async function deleteChat(id: string) {
   return write(async () => {
     const row = await chatRow(id)
     await db.messages.where('conversation_id').equals(id).delete()
-    await db.proposals.filter(proposal => proposal.conversation_id === id).delete()
+    await db.proposals.where('conversation_id').equals(id).delete()
     await db.chats.delete(id)
     return { data: { id: row.id, runId: runOf(id) }, revisions: { chats: await bump('chats') } }
   })
@@ -109,7 +125,6 @@ export function startRun(input: SendInput): Promise<StartedRun> {
         updated_at: now,
         version: 1
       })
-      await bump('chats')
     }
     if (await db.messages.get(input.clientMessageId)) throw fault(409, 'AI_MESSAGE_CONFLICT', '消息标识已使用')
     const seq = await nextSeq(conversationId)
@@ -133,16 +148,13 @@ export function startRun(input: SendInput): Promise<StartedRun> {
 
 export function retryRun(runId: string): Promise<StartedRun> {
   return write(async () => {
-    const assistant = (await db.messages.filter(message => message.run_id === runId).toArray())[0]
-    if (!assistant) throw notFound()
+    const assistant = await runMessage(runId)
     if (!['failed', 'cancelled', 'interrupted'].includes(assistant.state)) {
       throw fault(409, 'AI_CANNOT_RETRY', '此回复无法重试')
     }
     const latest = await latestAssistant(assistant.conversation_id)
     if (latest?.id !== assistant.id) throw fault(409, 'AI_CANNOT_RETRY', '仅可重试当前会话的最新一轮')
-    const previous = (await db.messages.where('conversation_id').equals(assistant.conversation_id).toArray())
-      .filter(message => message.role === 'user' && message.seq < assistant.seq)
-      .sort((left, right) => right.seq - left.seq)[0]
+    const previous = await previousUser(assistant.conversation_id, assistant.seq)
     if (!previous) throw notFound()
     const next = randomId()
     await db.messages.put({
@@ -164,7 +176,7 @@ export function markRunning(runId: string) {
 }
 
 export async function runMessage(runId: string): Promise<MessageRow> {
-  const rows = await db.messages.filter(message => message.run_id === runId).toArray()
+  const rows = await db.messages.where('run_id').equals(runId).limit(1).toArray()
   if (!rows.length) throw notFound()
   return rows[0]
 }
@@ -172,9 +184,7 @@ export async function runMessage(runId: string): Promise<MessageRow> {
 export async function snapshotOf(runId: string): Promise<RunSnapshot> {
   await openDb()
   const message = await runMessage(runId)
-  const previous = (await db.messages.where('conversation_id').equals(message.conversation_id).toArray())
-    .filter(row => row.role === 'user' && row.seq < message.seq)
-    .sort((left, right) => right.seq - left.seq)[0]
+  const previous = await previousUser(message.conversation_id, message.seq)
   return {
     runId, conversationId: message.conversation_id, messageId: previous?.id ?? message.id,
     status: message.state, text: message.text, sources: sources(message.sources),
@@ -190,9 +200,7 @@ export function finishRun(runId: string, status: RunSnapshot['status'], errorCod
       await db.proposals.where('run_id').equals(runId)
         .modify(proposal => { if (proposal.status === 'pending') proposal.status = 'invalidated' })
     }
-    const previous = (await db.messages.where('conversation_id').equals(message.conversation_id).toArray())
-      .filter(row => row.role === 'user' && row.seq < message.seq)
-      .sort((left, right) => right.seq - left.seq)[0]
+    const previous = await previousUser(message.conversation_id, message.seq)
     await db.messages.put({
       ...message, state: status, text, sources: JSON.stringify(list), domains, error_code: errorCode
     })
@@ -208,10 +216,12 @@ export function finishRun(runId: string, status: RunSnapshot['status'], errorCod
 export async function historyOf(conversationId: string, beforeSeq: number, limit: number,
   settings: { ai_goals: number; ai_notes: number; ai_finance: number }) {
   const mask = maskOf(settings)
-  const rows = (await db.messages.where('conversation_id').equals(conversationId).toArray())
-    .filter(message => message.seq < beforeSeq && message.state === 'completed' && (message.domains & ~mask) === 0)
-    .sort((left, right) => right.seq - left.seq)
-    .slice(0, limit)
+  const rows = await db.messages.where('[conversation_id+seq]')
+    .between([conversationId, 0], [conversationId, beforeSeq], true, false)
+    .reverse()
+    .filter(message => message.state === 'completed' && (message.domains & ~mask) === 0)
+    .limit(limit)
+    .toArray()
   return rows.reverse().map(message => ({ role: message.role, text: message.text, domains: message.domains }))
 }
 

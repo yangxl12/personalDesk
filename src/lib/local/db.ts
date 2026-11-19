@@ -168,6 +168,12 @@ class BuxuDatabase extends Dexie {
     }).upgrade(tx => tx.table('goals').toCollection().modify((row: GoalRow) => {
       if (typeof row.created_at !== 'number') row.created_at = row.updated_at
     }))
+    // v3 补两个高频查询的索引：run_id 命中每次收发消息都会走，conversation_id 命中方案表的全表扫描。
+    // 只列变更的表，其余沿用上一版架构；纯加索引不需要数据迁移。
+    this.version(3).stores({
+      messages: 'id, conversation_id, &[conversation_id+seq], created_at, run_id',
+      proposals: 'id, run_id, status, conversation_id'
+    })
   }
 }
 

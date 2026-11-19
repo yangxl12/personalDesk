@@ -82,8 +82,16 @@ export type Dashboard = {
   goals: DashboardGoal[]; hasGoals: boolean; notes: NoteSummary[]; month: string; totals: Totals; savings: Savings
 }
 
+// 同一格式的构造不便宜，today 在每次载入工作台、记账弹窗打开时都会被调用：按时区缓存。
+const dayFormatters = new Map<string, Intl.DateTimeFormat>()
 export function today(timezone: string) {
-  return new Intl.DateTimeFormat('sv-SE', { timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
+  let formatter = dayFormatters.get(timezone)
+  if (!formatter) {
+    if (dayFormatters.size > 16) dayFormatters.clear()
+    formatter = new Intl.DateTimeFormat('sv-SE', { timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit' })
+    dayFormatters.set(timezone, formatter)
+  }
+  return formatter.format(new Date())
 }
 
 export function decimal(cents: string | number) {

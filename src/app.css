@@ -163,8 +163,10 @@ h2 { font-size: 16px; font-weight: 650; letter-spacing: -.012em; }
    -------------------------------------------------------------------------- */
 
 .ambient { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+/* 渐变本身已经晕开到透明，不再叠加 blur(70px)：三个 68vw 大层永久动画 + 缩放重栅格化时，
+   那层滤镜是移动端 GPU 的最大开销，去掉后视觉几乎无差。 */
 .ambient .orb {
-  position: absolute; border-radius: 50%; filter: blur(70px); opacity: .72;
+  position: absolute; border-radius: 50%; opacity: .72;
   will-change: transform;
 }
 .ambient .orb-a {

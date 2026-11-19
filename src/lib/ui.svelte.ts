@@ -29,6 +29,8 @@ export class WorkspaceUi {
   remoteChange = $state(false)
   notice = $state('')
   #timer: ReturnType<typeof setTimeout> | undefined
+  // Intl.DateTimeFormat 构造很贵，列表里每一行都会调 date()：按语言+时区缓存。
+  #dates = new Map<string, Intl.DateTimeFormat>()
 
   constructor(preferences: () => Preferences, model: () => ModelStatus) {
     this.preferences = $derived.by(preferences)
@@ -41,7 +43,14 @@ export class WorkspaceUi {
   }
 
   date(value: number) {
-    return new Intl.DateTimeFormat(this.preferences.language, { dateStyle: 'medium', timeZone: this.preferences.timezone }).format(value)
+    const key = this.preferences.language + '\n' + this.preferences.timezone
+    let formatter = this.#dates.get(key)
+    if (!formatter) {
+      if (this.#dates.size > 8) this.#dates.clear()
+      formatter = new Intl.DateTimeFormat(this.preferences.language, { dateStyle: 'medium', timeZone: this.preferences.timezone })
+      this.#dates.set(key, formatter)
+    }
+    return formatter.format(value)
   }
 
   notify(text: string) {

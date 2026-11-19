@@ -317,13 +317,19 @@ async function generate(runtime: registry.Runtime, settings: Configuration, inpu
 
     let buffer = ''
     let lastEvent = 0
+    // 权限/版本校验节流到每秒一次：逐个分片读设置表纯属开销；中止仍逐分片检查，即时生效。
+    let checked = 0
     for await (const part of streaming.fullStream) {
       if (part.type === 'error' || part.type === 'tool-error') throw part.error
       if (part.type !== 'text-delta') continue
-      await guard(usedDomains)
+      if (abort.signal.aborted) throw new Error('aborted')
+      const now = Date.now()
+      if (now - checked > 1_000) {
+        checked = now
+        await guard(usedDomains)
+      }
       buffer += part.text
       runtime.snapshot.text += part.text
-      const now = Date.now()
       if (now - lastEvent > 55) {
         registry.publish(runtime, 'text_delta', { delta: buffer, offset: runtime.snapshot.text.length - buffer.length })
         buffer = ''

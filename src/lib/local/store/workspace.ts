@@ -2,7 +2,7 @@ import { db, openDb, type GoalRow, type ItemRow, type NoteRow, type TaskRow, typ
 import { randomId } from '#lib/random-id'
 import { write } from '../tx'
 import {
-  inputs, month, type Dashboard, type DashboardGoal, type Finance, type Goal, type GoalPlan, type GoalTask, type List,
+  inputs, month, today, type Dashboard, type DashboardGoal, type Finance, type Goal, type GoalPlan, type GoalTask, type List,
   type Note, type NoteSummary, type Preferences, type Revisions, type Savings, type TaskBrief, type Totals, type Progress
 } from '#lib/contracts/workspace'
 
@@ -78,7 +78,8 @@ export async function savings(): Promise<Savings> {
 }
 
 export function accountMonth(timezone: string) {
-  return new Intl.DateTimeFormat('sv-SE', { timeZone: timezone, year: 'numeric', month: '2-digit' }).format(new Date())
+  // 复用 today() 的缓存格式化器，截掉日就是月份，不再单独构造 Intl。
+  return today(timezone).slice(0, 7)
 }
 
 export function pageOptions(query: URLSearchParams): PageOptions {
