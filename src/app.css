@@ -564,8 +564,14 @@ h2 { font-size: 16px; font-weight: 650; letter-spacing: -.012em; }
 .check-row input[type="checkbox"]:checked, .check-box.on {
   border-color: transparent;
   background-color: var(--primary-fill);
-  background-image: linear-gradient(135deg, var(--primary-fill), var(--primary-2)),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 12.5 4.5 4.5L19 6.5'/%3E%3C/svg%3E");
+  /* 对勾必须写在渐变前面：背景图层叠顺序是「先写的在上」，写反了实色渐变会把对勾盖住，只剩一块色块 */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 12.5 4.5 4.5L19 6.5'/%3E%3C/svg%3E"),
+    linear-gradient(135deg, var(--primary-fill), var(--primary-2));
+  background-size: 74% 74%, 100% 100%;
+  background-position: center, center;
+  background-repeat: no-repeat, no-repeat;
+  background-position: center, center;
+  background-repeat: no-repeat, no-repeat;
   box-shadow: 0 5px 14px -5px var(--primary);
   animation: check-pop .42s var(--ease);
 }
@@ -821,8 +827,9 @@ dialog[open]::backdrop { animation: fade-in .38s both; }
   box-shadow: 0 0 0 3px var(--primary-soft);
 }
 .goal-task-input.done { color: var(--muted); text-decoration: line-through; }
-.goal-task-remove { flex: none; width: 30px; min-height: 30px; color: var(--faint); opacity: .8; }
-.goal-task-remove:hover { color: var(--negative); background: var(--negative-soft); opacity: 1; }
+/* 删除按钮常驻可见：色值按 --muted 走，别再用 --faint + opacity，浅底上基本看不见 */
+.goal-task-remove { flex: none; width: 30px; min-height: 30px; border-radius: 9px; color: var(--muted); }
+.goal-task-remove:hover { color: var(--negative); background: var(--negative-soft); }
 .task-picker-empty { padding: 12px 10px; color: var(--muted); font-size: 13px; }
 .footer-delete { margin-right: auto; color: var(--negative); }
 .footer-delete:hover { background: var(--negative-soft); }

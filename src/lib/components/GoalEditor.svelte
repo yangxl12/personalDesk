@@ -225,7 +225,7 @@
                   <input class="goal-task-input" class:done={row.done} bind:value={row.title}
                     maxlength={120} placeholder={ui.t('任务名称')} aria-label={ui.t('任务名称')}>
                   <button type="button" class="button icon-button goal-task-remove" aria-label={ui.t('删除任务')}
-                    onclick={() => removeRow(row)}><Icon name="trash" size={15} /></button>
+                    onclick={() => removeRow(row)}><Icon name="trash" size={16} /></button>
                 </li>
               {/each}
             </ul>
