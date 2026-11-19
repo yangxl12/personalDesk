@@ -90,7 +90,7 @@
 
 {#if goals.length}
   <div class="goal-rail">
-    <section bind:this={rail} class="goal-board" aria-label={ui.t('目标管理')} data-own-swipe>
+    <section bind:this={rail} class="goal-board" class:at-start={atStart} class:at-end={atEnd} aria-label={ui.t('目标管理')} data-own-swipe>
       {#each goals as goal (goal.id)}
         <article class="card goal-board-card goal-slide" id={'goal-' + goal.id}>
           <header class="goal-card-head">
