@@ -203,6 +203,8 @@ h2 { font-size: 16px; font-weight: 650; letter-spacing: -.012em; }
   /* 竖向节奏：悬浮按钮到首卡、卡片与卡片之间共用同一个间距 */
   --stack-gap: 18px;
   position: relative; z-index: 1; display: flex; min-height: 100dvh; align-items: flex-start;
+  /* 工作台的三块面板会向视口边缘外扩给阴影留空间，这里兜住，别撑出横向滚动条 */
+  overflow-x: clip;
 }
 .workspace { flex: 1 1 0; min-width: 0; padding-top: calc(var(--top-gap) + env(safe-area-inset-top, 0px)); }
 /* 页面自带顶栏（设置页）时不再额外留白，让顶栏和悬浮按钮落在同一行 */
@@ -347,20 +349,25 @@ h2 { font-size: 16px; font-weight: 650; letter-spacing: -.012em; }
 }
 .home-page {
   display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0;
-  /* 整块工作台左右各外扩一个 gutter 再补回内边距：卡片的位置和宽度都不变，
-     但裁剪线落在内容区外沿，贴边卡片的左右阴影才不会被切成竖线 */
-  margin-inline: calc(var(--gutter) * -1);
-  padding-inline: var(--gutter);
+  /* 卡片自身的位置和宽度都不变，外扩出来这一圈只用来给阴影留扩散空间：
+     裁剪线到卡片边缘的距离就是 --pad，卡片的圆角和阴影不会在边界上留下硬线 */
+  --pad: calc(var(--gutter) + 40px);
+  margin-inline: calc(var(--pad) * -1);
+  padding-inline: var(--pad);
   /* 底部图标按钮是固定定位，这里留出它占的高度 */
   padding-bottom: calc(70px + env(safe-area-inset-bottom, 0px));
+  /* clip + clip-margin 把裁剪线推到视口外：轨道上下外扩的那一圈阴影不会被这块面板切掉。
+     先写 hidden 兜底，不支持 overflow-clip-margin 的浏览器退回原来的裁法 */
   overflow: hidden;
+  overflow: clip;
+  overflow-clip-margin: 52px;
 }
 .home-track {
   display: flex; flex: 1 1 auto; min-height: 0;
-  margin-inline: calc(var(--gutter) * -1);
+  margin-inline: calc(var(--pad) * -1);
   transition: transform .55s var(--ease);
 }
-.home-slide { display: flex; flex-direction: column; flex: 0 0 100%; min-width: 0; min-height: 0; padding-inline: var(--gutter); }
+.home-slide { display: flex; flex-direction: column; flex: 0 0 100%; min-width: 0; min-height: 0; padding-inline: var(--pad); }
 .home-card { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; overflow: hidden; }
 .home-scroll {
   flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
@@ -397,8 +404,9 @@ h2 { font-size: 16px; font-weight: 650; letter-spacing: -.012em; }
 /* 目标轨道在整屏面板里撑满高度，卡片内部自己滚动 */
 .home-slide .goal-rail { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; }
 /* 上下各外扩一圈：卡片的尺寸和财务/思考面板完全一致（撑满整块面板），
-   外扩出来的 padding 只用来给阴影留扩散空间，再用负外边距收回，不占版式高度 */
-.home-slide .goal-board { flex: 1 1 auto; min-height: 0; padding-block: 20px; margin-block: -20px; }
+   外扩出来的 padding 只用来给阴影留扩散空间，再用负外边距收回，不占版式高度。
+   40px 是按 -shadow 的 18px 偏移 + 模糊尾留的余量，原来的 20px 正好把底边阴影切断 */
+.home-slide .goal-board { flex: 1 1 auto; min-height: 0; padding-block: 40px; margin-block: -40px; }
 .home-slide .goal-slide { height: 100%; }
 /* 卡片已经贴到面板底部，进度条没有可落脚的空隙（会压在卡片上），箭头和拖动仍然可用 */
 .home-slide .rail-scrollbar { display: none; }
@@ -456,19 +464,16 @@ h2 { font-size: 16px; font-weight: 650; letter-spacing: -.012em; }
   overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain;
   /* 上下留出阴影的完整扩散空间，负外边距把多出来的空隙吃掉，卡片间距只留 --stack-gap */
   padding-block: 8px 44px; margin-block: -8px -44px;
-  /* 左右同样向外扩到内容区边缘再把 padding 补回来：卡片的宽度、到两边的距离都不变，
-     但滚动容器不再紧贴卡片左右边缘裁剪阴影（否则会看到两条硬边） */
-  margin-inline: calc(var(--gutter) * -1);
-  padding-inline: var(--gutter);
-  scroll-padding-inline: var(--gutter);
-  /* 扩出来的留白平时按内容区裁掉，免得滚过去的卡片从留白里露出来；
-     只有贴着最左/最右那张卡片才放开外侧，让它的阴影完整扩散 */
-  clip-path: inset(-48px var(--gutter) -48px var(--gutter));
+  /* 左右同样向外扩到面板外沿再把 padding 补回来：卡片的宽度、到两边的距离都不变，
+     但滚动容器的裁剪线被推到阴影之外，不会再贴着卡片边缘切出竖线 */
+  margin-inline: calc(var(--pad, var(--gutter)) * -1);
+  padding-inline: var(--pad, var(--gutter));
+  scroll-padding-inline: var(--pad, var(--gutter));
+  /* 溢出的相邻卡片改用柔和渐隐收边（原来用 clip-path 硬裁，那条线正好压在卡片边缘上） */
+  mask-image: linear-gradient(90deg, transparent 0, #000 var(--pad, var(--gutter)), #000 calc(100% - var(--pad, var(--gutter))), transparent 100%);
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 var(--pad, var(--gutter)), #000 calc(100% - var(--pad, var(--gutter))), transparent 100%);
   scroll-snap-type: x mandatory; scrollbar-width: none; -webkit-overflow-scrolling: touch;
 }
-.goal-board.at-start { clip-path: inset(-48px var(--gutter) -48px 0); }
-.goal-board.at-end { clip-path: inset(-48px 0 -48px var(--gutter)); }
-.goal-board.at-start.at-end { clip-path: inset(-48px 0 -48px 0); }
 .goal-board::-webkit-scrollbar { display: none; }
 .goal-board-card { display: flex; flex-direction: column; gap: 2px; padding: 22px 24px 18px; }
 .goal-slide {
@@ -642,6 +647,8 @@ progress::-moz-progress-bar { background: linear-gradient(90deg, var(--primary-f
   position: relative; display: flex; flex-direction: column; gap: 8px; min-width: 0;
   padding: 17px 17px 18px; background: var(--glass-2); border: 1px solid var(--line);
   border-radius: 18px; box-shadow: inset 0 1px 0 var(--glass-edge);
+  /* 右上角的光斑画到了卡片外 50px，不裁的话会把滚动区撑出横向滚动条 */
+  overflow: hidden;
   transition: transform .42s var(--ease), border-color .3s, background-color .3s, box-shadow .42s var(--ease);
 }
 .note-card::after {
@@ -970,7 +977,7 @@ body:has(.home-dock) .toast { bottom: calc(76px + env(safe-area-inset-bottom, 0p
   #main { padding-bottom: 40px; }
   /* 手机端整屏面板不让页面自己滚，底部图标再往下压一点 */
   .home-page { padding-bottom: calc(74px + env(safe-area-inset-bottom, 0px)); }
-  .home-slide .goal-board { padding-block: 14px; margin-block: -14px; }
+  .home-slide .goal-board { padding-block: 36px; margin-block: -36px; }
   .goal-board-card { padding: 18px 18px 14px; }
   .goal-board-card.goal-slide { padding: 18px 18px 16px; }
   .goal-board-title { font-size: 17px; }
