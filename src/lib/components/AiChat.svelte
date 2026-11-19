@@ -1,6 +1,6 @@
 <script lang="ts">
   import { randomId } from '#lib/random-id'
-  import { onDestroy, tick, untrack } from 'svelte'
+  import { tick, untrack } from 'svelte'
   import { invalidate } from '$app/navigation'
   import { page } from '$app/state'
   import { useUi } from '#lib/ui.svelte'
@@ -15,7 +15,6 @@
   import Icon from './Icon.svelte'
   import ProposalCard from './ProposalCard.svelte'
 
-  let { close, mobile }: { close: () => void; mobile: boolean } = $props()
   const ui = useUi()
   let messages = $state<Message[]>([])
   let header = $state<Chat | null>(null)
@@ -34,7 +33,6 @@
   let subscription: { close: () => void } | undefined
   let lastEvent = -1
   let streamRun: string | null = null
-  let openCount = 0
   let attempts = new Map<string, { key: string; messageId: string }>()
   let retryAttempt: { id: string; modelRef?: string; key: string } | undefined
   let cancelAttempt: { id: string; key: string } | undefined
@@ -65,23 +63,12 @@
   })
 
   $effect(() => {
-    const open = ui.chatOpen
-    if (!open) return
-    const id = ui.chatId
-    untrack(() => {
-      if (++openCount > 1 && id) void load(id, ui.chatRevision)
-      void tick().then(() => textarea?.focus())
-    })
+    void tick().then(() => textarea?.focus())
   })
 
-  // 关闭面板后保持订阅，后台生成状态才能准确反映到工作台的 AI 按钮上。
-  $effect(() => {
-    ui.aiRunning = generating
-  })
-
-  onDestroy(() => {
+  // 生成中的运行态在模块级注册表里跑，离开页面不会中断；回到页面时重新订阅即可接着看。
+  $effect(() => () => {
     subscription?.close()
-    ui.aiRunning = false
   })
 
   async function stickToBottom() {
@@ -112,7 +99,7 @@
         if (!retained.length) before = data.before
         await stickToBottom()
       }
-      if (header.runId && ui.chatOpen) watch(header.runId)
+      if (header.runId) watch(header.runId)
       if (!header.runId) {
         runtime = null
         subscription?.close()
@@ -145,7 +132,6 @@
       if (runtime && !['queued', 'running'].includes(runtime.status)) {
         connection.close()
         subscription = undefined
-        if (!ui.chatOpen && runtime.status === 'completed') ui.notify('AI 回复已完成')
         void load(ui.chatId, ui.chatRevision)
         void refreshModules({ chats: 0 })
       }
@@ -159,9 +145,12 @@
     if (pending || switchingModel || generating || !text) return
     // 路由在 (app) 分组下，用 route.id 取站内路径，不受部署 base 影响。
     const parts = (page.route.id ?? '').replace(/^\/\(app\)/, '').split('/').filter(Boolean)
-    const name = (parts[0] ?? 'dashboard') as NonNullable<SendInput['pageContext']>['page']
+    const name = parts[0] ?? 'dashboard'
+    // AI 自己是独立页面，不把它的路径当成上下文来源。
     const selected = month.safeParse(page.url.searchParams.get('month'))
-    const context = { page: name, entityId: parts[1], selectedMonth: selected.success ? selected.data : undefined }
+    const context = ['dashboard', 'chats', 'settings'].includes(name)
+      ? { page: name as NonNullable<SendInput['pageContext']>['page'], entityId: parts[1], selectedMonth: selected.success ? selected.data : undefined }
+      : undefined
     const attachments = ui.attachment ? [{ kind: ui.attachment.kind, id: ui.attachment.id }] : []
     const submittedChat = ui.chatId
     const modelRef = ui.chatModel.activeRef ?? undefined
@@ -290,15 +279,6 @@
     })
   }
 
-  function trapFocus(event: KeyboardEvent) {
-    if (!mobile || event.key !== 'Tab') return
-    const items = [...(event.currentTarget as HTMLElement).querySelectorAll<HTMLElement>('button:not(:disabled), a[href], textarea, select:not(:disabled)')].filter(node => node.getClientRects().length)
-    const first = items[0]
-    const last = items.at(-1)
-    if (event.shiftKey && document.activeElement === first && last) { event.preventDefault(); last.focus() }
-    if (!event.shiftKey && document.activeElement === last && first) { event.preventDefault(); first.focus() }
-  }
-
   const errors: Record<string, string> = {
     AI_NOT_CONFIGURED: 'AI 模型尚未配置', AI_CANCELLED: '已停止生成', AI_TIMEOUT: '模型响应超时',
     AI_PERMISSION_CHANGED: 'AI 数据访问权限已变更', AI_RATE_LIMITED: '模型请求过于频繁',
@@ -311,107 +291,106 @@
   const prompts = ['帮我看看有哪些进行中的目标', '总结最近的思考记录', '查看本月的收支情况']
 </script>
 
-<aside class="ai-panel" hidden={!ui.chatOpen} role={mobile ? 'dialog' : 'complementary'} aria-modal={mobile ? true : undefined} aria-label={ui.t('AI 助手')} onkeydown={trapFocus}>
-  <header class="ai-head">
-    <span class="section-icon"><Icon name="spark" size={19} /></span>
-    <div>
-      <strong>{ui.t(view === 'history' ? 'AI 对话历史' : 'AI 助手')}</strong>
-      {#if view === 'chat'}
-        {#if ui.chatModel.models.length > 1}
-          <select class="chat-model" aria-label={ui.t('当前模型')} value={ui.chatModel.activeRef ?? ''} disabled={pending || switchingModel || generating}
-            onchange={event => switchModel(event.currentTarget)}>
-            {#each ui.chatModel.models as profile (profile.ref)}
-              <option value={profile.ref}>{profile.label || profile.id} · {profile.provider === 'deepseek' ? 'DeepSeek' : ui.t('自定义兼容接口')}</option>
-            {/each}
-          </select>
-        {:else}
-          <small>{ui.chatModel.models[0]?.label || ui.chatModel.models[0]?.id || ui.t('AI 模型尚未配置')}</small>
-        {/if}
-      {/if}
-    </div>
-    <button class="button icon-button" type="button" aria-label={ui.t('AI 对话历史')} title={ui.t('AI 对话历史')}
-      aria-pressed={view === 'history'} onclick={toggleHistory}><Icon name="chats" size={18} /></button>
-    <button class="button icon-button" type="button" aria-label={ui.t('新建会话')} onclick={newChat}><Icon name="plus" size={18} /></button>
-    <button class="button icon-button" type="button" aria-label={ui.t('关闭 AI 助手')} onclick={close}><Icon name="close" size={18} /></button>
-  </header>
-  {#if view === 'history'}
-    <div class="chat-history">
-      {#each chats as chat (chat.id)}
-        <div class="history-row">
-          <button class="history-entry" type="button" aria-current={ui.chatId === chat.id ? 'true' : undefined} onclick={() => selectChat(chat.id)}>
-            <span class="section-icon"><Icon name="chats" size={18} /></span>
-            <span><strong>{chat.title}</strong><small>{ui.date(chat.updated_at)}</small></span>
-            {#if ui.chatId === chat.id}<Icon name="check" size={16} />{/if}
-          </button>
-          <button class="button icon-button" type="button" aria-label={ui.t('删除会话')} onclick={() => deleteChat(chat)}><Icon name="trash" size={16} /></button>
-        </div>
-      {:else}
-        <p class="chat-history-empty">{ui.t(loadingChats ? '加载中…' : '还没有对话')}</p>
-      {/each}
-      {#if nextCursor}
-        <button class="button secondary chat-history-more" type="button" disabled={loadingChats} onclick={() => loadChats(nextCursor ?? undefined)}>{ui.t('加载更多')}</button>
-      {/if}
-    </div>
-  {:else}
-    {#if header}<div class="conversation-title">{header.title}</div>{/if}
-    <div class="message-list" bind:this={timeline} onscroll={event => {
-      const node = event.currentTarget
-      nearBottom = node.scrollHeight - node.scrollTop - node.clientHeight < 55
-    }}>
-    {#if before}<button class="button secondary" type="button" onclick={() => load(ui.chatId, ui.chatRevision, true)}>{ui.t('查看更早消息')}</button>{/if}
-    {#each messages as message (message.id)}
-      {@const content = runtime?.runId === message.runId && message.role === 'assistant' ? runtime : null}
-      {@const state = content?.status ?? message.state}
-      {@const text = content?.text ?? message.text}
-      {@const errorCode = content?.errorCode ?? message.errorCode}
-      {@const proposal = content?.proposalId ?? message.proposalId}
-      <article class={'message ' + message.role}>
-        {#if message.role === 'assistant'}<span class="message-avatar"><Icon name="spark" size={15} /></span>{/if}
-        <div class="message-content">
-          {#if text}<div class="bubble">{text}</div>{/if}
-          {#if state === 'running' || state === 'queued'}<small>{ui.t('正在生成…')}</small>{/if}
-          {#each content?.sources ?? message.sources as item (item.href)}
-            <a class="text-link chat-source" href={item.href}>{ui.t(item.label)}<Icon name="chevron" size={14} /></a>
-          {/each}
-          {#if proposal}<ProposalCard id={proposal} ready={state === 'completed'} />{/if}
-          {#if errorCode}
-            <p class="form-error">{ui.t(errors[errorCode] ?? '生成失败，请重试')}</p>
-            {#if message.runId && message.id === messages.at(-1)?.id}
-              <button class="button secondary" type="button" onclick={() => retry(message.runId!)} disabled={pending || switchingModel}>{ui.t('重试')}</button>
-            {/if}
-          {/if}
-        </div>
-      </article>
-    {:else}
-      <div class="chat-welcome">
-        <span class="empty-icon"><Icon name="spark" size={22} /></span>
-        <strong>{ui.t('你想聊些什么？')}</strong>
-        {#each prompts as prompt}
-          <button class="button secondary" type="button" onclick={() => { draft = ui.t(prompt); textarea.focus() }}>{ui.t(prompt)}</button>
+<div class="card ai-page">
+  <div class="ai-toolbar">
+    {#if ui.chatModel.models.length > 1}
+      <select class="chat-model" aria-label={ui.t('当前模型')} value={ui.chatModel.activeRef ?? ''} disabled={pending || switchingModel || generating}
+        onchange={event => switchModel(event.currentTarget)}>
+        {#each ui.chatModel.models as profile (profile.ref)}
+          <option value={profile.ref}>{profile.label || profile.id} · {profile.provider === 'deepseek' ? 'DeepSeek' : ui.t('自定义兼容接口')}</option>
         {/each}
-      </div>
-    {/each}
-  </div>
-  <form class="composer" onsubmit={event => { event.preventDefault(); void send() }}>
-    {#if ui.attachment}
-      <div class="attachment"><Icon name={ui.attachment.kind === 'goal' ? 'goals' : 'notes'} size={16} /><span>{ui.attachment.label}</span>
-        <button class="button icon-button" type="button" aria-label={ui.t('移除附件')} onclick={() => { ui.attachment = null }}><Icon name="close" size={15} /></button>
-      </div>
+      </select>
+    {:else}
+      <small class="ai-model-name">{ui.chatModel.models[0]?.label || ui.chatModel.models[0]?.id}</small>
     {/if}
-    {#if error}<p class="form-error" role="alert">{error}</p>{/if}
-    <div class="composer-field">
-      <textarea bind:this={textarea} bind:value={draft} rows="2" maxlength="24000" aria-label={ui.t('消息')} placeholder={ui.t('输入消息…')}
-        onkeydown={event => {
-          if (event.key !== 'Enter' || event.shiftKey || event.isComposing || event.keyCode === 229) return
-          event.preventDefault()
-          void send()
-        }}></textarea>
-      {#if header?.runId}
-        <button class="button secondary" type="button" disabled={pending} onclick={() => cancel(header!.runId!)}>{ui.t('停止')}</button>
-      {:else}
-        <button class="button primary send-button" type="submit" aria-label={ui.t('发送')} disabled={pending || switchingModel || !draft.trim()}><Icon name="send" size={17} /></button>
-      {/if}
+    <div class="ai-tools">
+      <button class="button secondary" class:active={view === 'history'} type="button" aria-pressed={view === 'history'}
+        title={ui.t('AI 对话历史')} onclick={toggleHistory}><Icon name="chats" size={16} />{ui.t('历史')}</button>
+      <button class="button secondary" type="button" title={ui.t('新建会话')} onclick={newChat}><Icon name="plus" size={16} />{ui.t('新建')}</button>
     </div>
-  </form>
+  </div>
+  <div class="ai-body">
+    {#if view === 'history'}
+      <div class="chat-history">
+        {#each chats as chat (chat.id)}
+          <div class="history-row">
+            <button class="history-entry" type="button" aria-current={ui.chatId === chat.id ? 'true' : undefined} onclick={() => selectChat(chat.id)}>
+              <span class="section-icon"><Icon name="chats" size={18} /></span>
+              <span><strong>{chat.title}</strong><small>{ui.date(chat.updated_at)}</small></span>
+              {#if ui.chatId === chat.id}<Icon name="check" size={16} />{/if}
+            </button>
+            <button class="button icon-button" type="button" aria-label={ui.t('删除会话')} onclick={() => deleteChat(chat)}><Icon name="trash" size={16} /></button>
+          </div>
+        {:else}
+          <p class="chat-history-empty">{ui.t(loadingChats ? '加载中…' : '还没有对话')}</p>
+        {/each}
+        {#if nextCursor}
+          <button class="button secondary chat-history-more" type="button" disabled={loadingChats} onclick={() => loadChats(nextCursor ?? undefined)}>{ui.t('加载更多')}</button>
+        {/if}
+      </div>
+    {:else}
+      {#if header}<div class="conversation-title">{header.title}</div>{/if}
+      <div class="message-list" bind:this={timeline} onscroll={event => {
+        const node = event.currentTarget
+        nearBottom = node.scrollHeight - node.scrollTop - node.clientHeight < 55
+      }}>
+      {#if before}<button class="button secondary" type="button" onclick={() => load(ui.chatId, ui.chatRevision, true)}>{ui.t('查看更早消息')}</button>{/if}
+      {#each messages as message (message.id)}
+        {@const content = runtime?.runId === message.runId && message.role === 'assistant' ? runtime : null}
+        {@const state = content?.status ?? message.state}
+        {@const text = content?.text ?? message.text}
+        {@const errorCode = content?.errorCode ?? message.errorCode}
+        {@const proposal = content?.proposalId ?? message.proposalId}
+        <article class={'message ' + message.role}>
+          {#if message.role === 'assistant'}<span class="message-avatar"><Icon name="spark" size={15} /></span>{/if}
+          <div class="message-content">
+            {#if text}<div class="bubble">{text}</div>{/if}
+            {#if state === 'running' || state === 'queued'}<small>{ui.t('正在生成…')}</small>{/if}
+            {#each content?.sources ?? message.sources as item (item.href)}
+              <a class="text-link chat-source" href={item.href}>{ui.t(item.label)}<Icon name="chevron" size={14} /></a>
+            {/each}
+            {#if proposal}<ProposalCard id={proposal} ready={state === 'completed'} />{/if}
+            {#if errorCode}
+              <p class="form-error">{ui.t(errors[errorCode] ?? '生成失败，请重试')}</p>
+              {#if message.runId && message.id === messages.at(-1)?.id}
+                <button class="button secondary" type="button" onclick={() => retry(message.runId!)} disabled={pending || switchingModel}>{ui.t('重试')}</button>
+              {/if}
+            {/if}
+          </div>
+        </article>
+      {:else}
+        <div class="chat-welcome">
+          <span class="empty-icon"><Icon name="spark" size={22} /></span>
+          <strong>{ui.t('你想聊些什么？')}</strong>
+          {#each prompts as prompt}
+            <button class="button secondary" type="button" onclick={() => { draft = ui.t(prompt); textarea.focus() }}>{ui.t(prompt)}</button>
+          {/each}
+        </div>
+      {/each}
+    </div>
+    {/if}
+  </div>
+  {#if view === 'chat'}
+    <form class="composer" onsubmit={event => { event.preventDefault(); void send() }}>
+      {#if ui.attachment}
+        <div class="attachment"><Icon name={ui.attachment.kind === 'goal' ? 'goals' : 'notes'} size={16} /><span>{ui.attachment.label}</span>
+          <button class="button icon-button" type="button" aria-label={ui.t('移除附件')} onclick={() => { ui.attachment = null }}><Icon name="close" size={15} /></button>
+        </div>
+      {/if}
+      {#if error}<p class="form-error" role="alert">{error}</p>{/if}
+      <div class="composer-field">
+        <textarea bind:this={textarea} bind:value={draft} rows="2" maxlength="24000" aria-label={ui.t('消息')} placeholder={ui.t('输入消息…')}
+          onkeydown={event => {
+            if (event.key !== 'Enter' || event.shiftKey || event.isComposing || event.keyCode === 229) return
+            event.preventDefault()
+            void send()
+          }}></textarea>
+        {#if header?.runId}
+          <button class="button secondary" type="button" disabled={pending} onclick={() => cancel(header!.runId!)}>{ui.t('停止')}</button>
+        {:else}
+          <button class="button primary send-button" type="submit" aria-label={ui.t('发送')} disabled={pending || switchingModel || !draft.trim()}><Icon name="send" size={17} /></button>
+        {/if}
+      </div>
+    </form>
   {/if}
-</aside>
+</div>

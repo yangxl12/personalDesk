@@ -55,7 +55,6 @@
   --savings-bg: var(--glass-2);
   --control-border: var(--line-strong);
 
-  --panel-width: 364px;
   --radius: 24px;
   --radius-sm: 14px;
   --blur: 26px;
@@ -207,8 +206,6 @@ h2 { font-size: 16px; font-weight: 650; letter-spacing: -.012em; }
   position: fixed; top: calc(var(--stack-gap) + env(safe-area-inset-top, 0px)); right: var(--gutter); z-index: 6;
   display: flex; align-items: center; gap: 8px;
 }
-/* AI 面板展开时按钮收回到工作区宽度，不压到面板下面 */
-.shell:has(.ai-panel) .float-actions { right: calc(var(--panel-width) + var(--gutter)); }
 .float-actions .icon-button {
   width: 40px; min-height: 40px; border-radius: 50%;
   color: var(--muted);
@@ -246,13 +243,6 @@ h2 { font-size: 16px; font-weight: 650; letter-spacing: -.012em; }
 .brand-mark i:nth-child(3) { height: 17px; }
 .brand:hover .brand-mark { transform: translateY(-2px) rotate(-4deg); box-shadow: 0 16px 28px -10px var(--primary), inset 0 1px 0 rgba(255, 255, 255, .55); }
 .brand:hover .brand-mark { transform: translateY(-2px) rotate(-4deg); box-shadow: 0 16px 28px -10px var(--primary), inset 0 1px 0 rgba(255, 255, 255, .55); }
-
-.float-actions .ai-dot {
-  position: absolute; top: 1px; right: 1px; width: 8px; height: 8px; border-radius: 50%;
-  background: var(--primary-2); box-shadow: 0 0 0 2px var(--glass-strong), 0 0 12px 3px var(--primary);
-  animation: ai-pulse 1.6s ease-in-out infinite;
-}
-@keyframes ai-pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .45; transform: scale(.72); } }
 
 /* --------------------------------------------------------------------------
    按钮
@@ -296,7 +286,6 @@ h2 { font-size: 16px; font-weight: 650; letter-spacing: -.012em; }
 .icon-button:hover { color: var(--primary); background: var(--primary-soft); }
 .icon-button[data-action^="delete"]:hover { color: var(--negative); background: var(--negative-soft); }
 .float-actions .ai-toggle { position: relative; color: var(--primary); }
-.float-actions .ai-toggle.active { background: var(--primary-tint); box-shadow: 0 0 0 1px var(--primary-tint), 0 6px 20px -8px var(--primary); }
 
 .text-link { color: var(--primary); font-weight: 650; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; min-height: 34px; white-space: nowrap; }
 .text-link:hover { text-decoration: underline; text-underline-offset: 3px; }
@@ -705,24 +694,27 @@ dialog footer { display: flex; justify-content: flex-end; gap: 9px; padding: 15p
 }
 
 /* --------------------------------------------------------------------------
-   AI 侧栏
+   AI 页面
    -------------------------------------------------------------------------- */
 
-.ai-panel {
-  position: sticky; top: 0; z-index: 8; width: var(--panel-width); flex: 0 0 var(--panel-width); height: 100dvh;
-  background: var(--glass-strong); border-left: 1px solid var(--line);
-  backdrop-filter: blur(30px) saturate(170%); -webkit-backdrop-filter: blur(30px) saturate(170%);
-  box-shadow: -24px 0 60px -44px rgba(40, 28, 90, .5), inset 1px 0 0 var(--glass-edge);
-  display: flex; flex-direction: column;
-  animation: panel-in .45s var(--ease) both;
+/* 对话页占满一屏，输入框常驻底部，只有消息区自己滚动 */
+#main:has(.ai-page) { display: flex; flex-direction: column; height: 100dvh; padding-bottom: 18px; }
+.card.ai-page {
+  display: grid; grid-template-rows: auto minmax(0, 1fr) auto;
+  flex: 1; min-height: 0; width: 100%; max-width: 800px; margin-inline: auto;
+  padding: 0; overflow: hidden;
 }
-.ai-head { min-height: 72px; border-bottom: 1px solid var(--line); padding: 12px 14px; display: flex; align-items: center; gap: 9px; }
-.ai-head > div { flex: 1; min-width: 0; }
-.ai-head strong, .ai-head small { display: block; }
-.ai-head strong { font-size: 14px; font-weight: 650; }
-.ai-head small { margin-top: 3px; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ai-head .icon-button[aria-pressed="true"] { background: var(--primary-soft); color: var(--primary); }
-.chat-model { max-width: 100%; margin-top: 4px; min-height: 28px; padding: 3px 6px; border: 1px solid var(--line); border-radius: 9px; background: var(--glass-2); color: var(--ink); font-size: 11.5px; text-overflow: ellipsis; }
+.card.ai-page.ai-unconfigured { flex: 0 0 auto; grid-template-rows: auto; place-items: center; width: min(100%, 460px); margin: auto; }
+.ai-unconfigured-inner { display: grid; justify-items: center; gap: 12px; padding: 36px 28px; text-align: center; }
+.ai-unconfigured-inner strong { font-size: 16px; font-weight: 650; }
+.ai-unconfigured-inner p { color: var(--muted); font-size: 13px; line-height: 1.7; }
+.ai-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+.ai-tools { display: flex; flex: none; gap: 6px; }
+.ai-tools .button { min-height: 34px; padding: 4px 11px; font-size: 12px; border-radius: 11px; }
+.ai-tools .button.active { color: var(--primary); border-color: var(--primary-tint); background: var(--primary-soft); }
+.ai-model-name { color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ai-body { display: flex; flex-direction: column; min-height: 0; }
+.chat-model { max-width: 100%; min-height: 30px; padding: 3px 6px; border: 1px solid var(--line); border-radius: 9px; background: var(--glass-2); color: var(--ink); font-size: 12px; text-overflow: ellipsis; }
 .conversation-title { padding: 12px 16px; border-bottom: 1px solid var(--line); font-size: 11.5px; color: var(--muted); overflow-wrap: anywhere; letter-spacing: .02em; }
 .chat-history { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 10px 16px 18px; display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; }
 .chat-history .history-row { gap: 5px; }
@@ -744,7 +736,7 @@ dialog footer { display: flex; justify-content: flex-end; gap: 9px; padding: 15p
 .message { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 14px; animation: rise .45s var(--ease) both; }
 .message.user { justify-content: flex-end; }
 .message-avatar { width: 28px; height: 28px; display: grid; place-items: center; flex: none; color: var(--primary); background: var(--primary-soft); border: 1px solid var(--line); border-radius: 10px; }
-.message-content { max-width: calc(100% - 36px); }
+.message-content { max-width: min(calc(100% - 36px), 640px); }
 .bubble {
   white-space: pre-wrap; overflow-wrap: anywhere;
   background: var(--glass-2); border: 1px solid var(--line); border-radius: 6px 18px 18px;
@@ -879,12 +871,8 @@ dialog footer { display: flex; justify-content: flex-end; gap: 9px; padding: 15p
   /* 桌面端目标轨道与下方卡片拉开距离，给滚动条留出呼吸空间 */
   .dashboard-grid > .goal-rail, .dashboard-grid > .dashboard-goals { margin-bottom: 16px; }
 }
-@media (min-width: 761px) and (max-width: 1120px) {
-  :root { --panel-width: 320px; }
-}
 @media (max-width: 760px) {
   .shell { --top-gap: 56px; --gutter: 15px; --stack-gap: 12px; }
-  .shell:has(.ai-panel) .float-actions { right: var(--gutter); }
   .float-actions .icon-button { width: 42px; min-height: 42px; }
   #main { padding-bottom: 40px; }
   .dashboard-grid { gap: var(--stack-gap); }
@@ -898,10 +886,11 @@ dialog footer { display: flex; justify-content: flex-end; gap: 9px; padding: 15p
   .goal-board-title { font-size: 17px; }
   .button { min-height: 43px; }
   .icon-button { width: 40px; min-height: 43px; }
-  .ai-panel { position: fixed; inset: 0; width: 100%; height: 100dvh; border: 0; }
-  .chat-fullscreen { overflow: hidden; }
+  #main:has(.ai-page) { padding-bottom: 8px; }
+  .ai-toolbar { padding: 10px 12px; }
+  /* 手机端工具栏按钮要留着能被拇指点中 */
+  .ai-tools .button { min-height: 38px; }
   .composer textarea, .field input, .field textarea, .field select { font-size: 16px; }
-  .ai-head { padding-top: max(12px, env(safe-area-inset-top)); }
 }
 @media (max-width: 365px) {
   .stat span { font-size: 10.5px; }
@@ -972,7 +961,6 @@ dialog footer { display: flex; justify-content: flex-end; gap: 9px; padding: 15p
 @keyframes rise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes dialog-in { from { opacity: 0; transform: translateY(18px) scale(.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
-@keyframes panel-in { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: translateX(0); } }
 @keyframes toast-in { from { opacity: 0; transform: translate(-50%, 14px); } to { opacity: 1; transform: translate(-50%, 0); } }
 
 /* --------------------------------------------------------------------------
@@ -993,5 +981,4 @@ dialog footer { display: flex; justify-content: flex-end; gap: 9px; padding: 15p
     transition-duration: .001ms !important;
     scroll-behavior: auto !important;
   }
-  .float-actions .ai-dot { animation: none; }
 }

@@ -5,6 +5,7 @@ import type { Preferences } from '#lib/contracts/workspace'
 import { english } from '#lib/translations'
 import { commit, refreshModules, RequestError } from '#lib/client'
 import { goto } from '$app/navigation'
+import { resolve } from '$app/paths'
 
 type Field = {
   name: string; label: string; type?: 'text' | 'textarea' | 'select' | 'date'
@@ -20,10 +21,8 @@ export type EditorSpec = {
 
 export class WorkspaceUi {
   preferences: Preferences
-  chatOpen = $state(false)
   chatId = $state<string | null>(null)
   chatRevision = $state(0)
-  aiRunning = $state(false)
   chatModel: ModelStatus
   attachment = $state<Attachment | null>(null)
   editor = $state<EditorSpec | null>(null)
@@ -51,9 +50,10 @@ export class WorkspaceUi {
     this.#timer = setTimeout(() => { this.notice = '' }, 3200)
   }
 
-  showChat(id: string | null = this.chatId) {
+  // AI 是独立页面，聊天状态留在布局级的 store 里，进出页面不会丢会话。
+  openChat(id: string | null = this.chatId) {
     this.chatId = id
-    this.chatOpen = true
+    void goto(resolve('ai'))
   }
 
   resetChat() {
@@ -62,8 +62,8 @@ export class WorkspaceUi {
   }
 
   attach(item: Attachment) {
-    this.showChat()
     this.attachment = item
+    void goto(resolve('ai'))
   }
 
   open(spec: EditorSpec) {
