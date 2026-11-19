@@ -593,7 +593,8 @@ h2 { font-size: 16px; font-weight: 650; letter-spacing: -.012em; }
   box-shadow: 0 5px 14px -5px var(--primary);
   animation: check-pop .42s var(--ease);
 }
-.check-row input[type="checkbox"]:disabled { opacity: .6; }
+/* 请求在飞的那几毫秒不要变暗：一闪的观感就是这么来的，禁用手感交给光标 */
+.check-row input[type="checkbox"]:disabled { cursor: default; }
 .check-row .row-actions { opacity: 0; transition: opacity .2s; }
 .check-row:hover .row-actions, .check-row:focus-within .row-actions { opacity: 1; }
 @keyframes check-pop { 0% { transform: scale(.78); } 60% { transform: scale(1.13); } 100% { transform: scale(1); } }

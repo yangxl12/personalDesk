@@ -198,10 +198,13 @@ export async function dashboard(): Promise<Dashboard> {
   const goals = (await db.goals.toArray()).sort((left, right) =>
     createdAt(left) - createdAt(right) || (left.id < right.id ? -1 : left.id > right.id ? 1 : 0))
   const grouped = await tasksByGoal(goals.map(goal => goal.id))
-  const plan = (goal: GoalRow): GoalPlan => ({
-    tasks: (grouped.get(goal.id) ?? []).slice(0, OUTLINE_TASKS).map(brief),
-    total: goal.total_tasks
-  })
+  // grouped 里已完成的任务排在后面：先用这个顺序挑出要展示的几条，避免已勾选的占满卡片；
+  // 挑完之后再按创建顺序还原，勾一下不会让任务行整体换位置（换位置看起来就是一蹦一蹦的闪）。
+  const plan = (goal: GoalRow): GoalPlan => {
+    const picked = (grouped.get(goal.id) ?? []).slice(0, OUTLINE_TASKS)
+      .sort((left, right) => left.created_at - right.created_at || (left.id < right.id ? -1 : 1))
+    return { tasks: picked.map(brief), total: goal.total_tasks }
+  }
   const notes = (await db.notes.toArray()).sort(descByTime<NoteRow>(row => row.updated_at))
   const [start, end] = bounds(month)
   const monthRows = await db.transactions.where('occurred_on').between(start, end, true, false).toArray()
