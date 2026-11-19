@@ -776,7 +776,12 @@ dialog footer { display: flex; justify-content: flex-end; gap: 9px; padding: 15p
    -------------------------------------------------------------------------- */
 
 .card.settings-panel { display: grid; gap: 0; max-width: 620px; padding: 0; margin-inline: auto; }
-.settings-block { padding: 24px; }
+.settings-block { position: relative; padding: 24px; }
+/* 分组之间一条两端淡出的浅线，分组内部不再有任何分割 */
+.settings-block + .settings-block::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; z-index: 1;
+  background: linear-gradient(90deg, transparent, var(--line-strong) 8%, var(--line-strong) 92%, transparent);
+}
 .settings-block .section-head { margin-bottom: 18px; }
 .theme-picker { border: 0; padding: 0; margin: 0; min-width: 0; }
 .theme-picker legend { padding: 0; margin-bottom: 10px; font-weight: 600; font-size: 13px; }
