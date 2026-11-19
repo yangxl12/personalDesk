@@ -13,6 +13,7 @@
   import type { List } from '#lib/contracts/workspace'
   import type { Chat, Message, RunReceipt, RunSnapshot, SendInput } from '#lib/contracts/ai'
   import Icon from './Icon.svelte'
+  import Markdown from './Markdown.svelte'
   import ProposalCard from './ProposalCard.svelte'
 
   const ui = useUi()
@@ -342,10 +343,14 @@
         {@const errorCode = content?.errorCode ?? message.errorCode}
         {@const proposal = content?.proposalId ?? message.proposalId}
         <article class={'message ' + message.role}>
-          {#if message.role === 'assistant'}<span class="message-avatar"><Icon name="spark" size={15} /></span>{/if}
           <div class="message-content">
-            {#if text}<div class="bubble">{text}</div>{/if}
-            {#if state === 'running' || state === 'queued'}<small>{ui.t('正在生成…')}</small>{/if}
+            {#if message.role === 'user'}
+              {#if text}<div class="user-bubble">{text}</div>{/if}
+            {:else if text}
+              <Markdown {text} />
+            {:else if state === 'running' || state === 'queued'}
+              <div class="typing" aria-label={ui.t('正在生成…')}><i></i><i></i><i></i></div>
+            {/if}
             {#each content?.sources ?? message.sources as item (item.href)}
               <a class="text-link chat-source" href={item.href}>{ui.t(item.label)}<Icon name="chevron" size={14} /></a>
             {/each}
@@ -360,11 +365,13 @@
         </article>
       {:else}
         <div class="chat-welcome">
-          <span class="empty-icon"><Icon name="spark" size={22} /></span>
+          <span class="welcome-mark"><Icon name="spark" size={20} /></span>
           <strong>{ui.t('你想聊些什么？')}</strong>
-          {#each prompts as prompt}
-            <button class="button secondary" type="button" onclick={() => { draft = ui.t(prompt); textarea.focus() }}>{ui.t(prompt)}</button>
-          {/each}
+          <div class="prompt-chips">
+            {#each prompts as prompt}
+              <button class="prompt-chip" type="button" onclick={() => { draft = ui.t(prompt); textarea.focus() }}>{ui.t(prompt)}</button>
+            {/each}
+          </div>
         </div>
       {/each}
     </div>
