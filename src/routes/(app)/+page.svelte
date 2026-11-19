@@ -1,7 +1,5 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { goto } from '$app/navigation'
-  import { resolve } from '$app/paths'
   import { page } from '$app/state'
   import { useUi } from '#lib/ui.svelte'
   import { request } from '#lib/client'
@@ -9,18 +7,17 @@
   import EmptyArt from '#lib/components/EmptyArt.svelte'
   import Icon from '#lib/components/Icon.svelte'
   import Savings from '#lib/components/Savings.svelte'
-  import FinanceStats from '#lib/components/FinanceStats.svelte'
   import FinanceLedger from '#lib/components/FinanceLedger.svelte'
   import NoteCard from '#lib/components/NoteCard.svelte'
   import GoalCards from '#lib/components/GoalCards.svelte'
-  import Ledger from '#lib/components/Ledger.svelte'
 
   let { data } = $props()
   const ui = useUi()
   let dashboard = $derived(data.dashboard)
-  let ledger = $state<string | null>(null)
+  // 记一笔或 AI 链接指向别的月份时，把财务卡片的筛选一起带过去。
+  let jump = $state<{ date: string } | null>(null)
   let backupDue = $state(false)
-  // 非响应式游标，避免同一 ?month= 深链关闭弹窗后被反复打开。
+  // 非响应式游标，避免同一 ?month= 深链反复触发跳转。
   let linked = ''
 
   // 三个板块只靠底部图标切换；目标内部的轨道仍然可以左右滑动。
@@ -44,7 +41,7 @@
     await request('/backup/dismiss', { method: 'POST', body: '{}' }).catch(() => {})
   }
 
-  // AI 来源链接指向 /?month=YYYY-MM，落地即打开该月收支记录。
+  // AI 来源链接指向 /?month=YYYY-MM，落地即把财务卡片切到该月。
   $effect(() => {
     const requested = page.url.searchParams.get('month')
     if (!requested) { linked = ''; return }
@@ -52,19 +49,13 @@
     linked = requested
     if (/^(?:[1-9]\d{3})-(?:0[1-9]|1[0-2])$/.test(requested)) {
       section = 'finance'
-      ledger = requested
+      jump = { date: requested + '-01' }
     }
   })
 
-  function closeLedger() {
-    ledger = null
-    if (page.url.searchParams.has('month')) void goto(resolve(''), { replace: true, reset: false })
-  }
-
-  // 工作台固定展示本月；记到其他月份时打开那个月的收支记录，给出可核对的落点。
+  // 记到别的月份时，财务卡片的筛选跟着落到那个月，避免保存后“看不见”。
   function afterRecord(data?: Record<string, string>) {
-    const month = data?.occurred_on?.slice(0, 7)
-    if (month && month !== dashboard.month) ledger = month
+    if (data?.occurred_on) jump = { date: data.occurred_on }
   }
 </script>
 
@@ -92,7 +83,6 @@
         <div class="home-scroll">
           {#if dashboard.notes.length}
             <div class="note-grid">{#each dashboard.notes as note (note.id)}<NoteCard {note} />{/each}</div>
-            <p class="notes-footnote"><Icon name="notes" size={14} />{ui.t('记录一个想法，留给之后的自己。')}</p>
           {:else}
             <div class="home-empty"><EmptyArt size={112} label={ui.t('还没有思考记录')} /></div>
           {/if}
@@ -109,18 +99,9 @@
           </div>
         </header>
         <div class="home-scroll">
-          <div class="finance-body">
-            <FinanceStats totals={dashboard.totals} />
-            <Savings savings={dashboard.savings} />
-          </div>
+          <Savings savings={dashboard.savings} />
           <section class="finance-ledger" aria-label={ui.t('收支记录')}>
-            <header class="finance-ledger-head">
-              <h3>{ui.t('收支记录')}</h3>
-              <button type="button" class="text-link" onclick={() => { ledger = dashboard.month }}>
-                {ui.t('查看全部')}<Icon name="arrow" size={14} />
-              </button>
-            </header>
-            <FinanceLedger month={dashboard.month} revision={dashboard} />
+            <FinanceLedger revision={dashboard} {jump} />
           </section>
         </div>
       </section>
@@ -136,8 +117,6 @@
     </button>
   {/each}
 </nav>
-
-{#if ledger}<Ledger month={ledger} onclose={closeLedger} />{/if}
 
 <style>
   .backup-bar {

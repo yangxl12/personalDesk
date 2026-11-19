@@ -12,6 +12,7 @@ export type Mutation = { data: Record<string, unknown>; revisions: Revisions }
 type Operation = keyof typeof inputs
 
 const OUTLINE_TASKS = 5
+const dayDate = /^\d{4}-\d{2}-\d{2}$/
 
 export const summaries = (text: string) => [...text.replace(/\s+/gu, ' ')].slice(0, 80).join('')
 
@@ -99,6 +100,15 @@ export function goalOptions(query: URLSearchParams): GoalOptions {
 export function financeOptions(query: URLSearchParams) {
   const selected = query.get('month') ?? undefined
   if (selected !== undefined && !month.safeParse(selected).success) throw fault(400, 'INVALID_QUERY', '月份格式无效')
+  const from = query.get('from') ?? undefined
+  const to = query.get('to') ?? undefined
+  // 工作台按年/月/日筛选时传日期区间（两端都包含），按月查的旧路径继续用 month。
+  if (from || to) {
+    if (!from || !to || !dayDate.test(from) || !dayDate.test(to) || from > to) {
+      throw fault(400, 'INVALID_QUERY', '日期范围无效')
+    }
+    return { ...pageOptions(query), from, to }
+  }
   return { ...pageOptions(query), month: selected }
 }
 
@@ -237,16 +247,20 @@ export async function note(noteId: string): Promise<Note> {
   return value
 }
 
-export async function finance(options: PageOptions & { month?: string }): Promise<Finance> {
+export async function finance(options: PageOptions & { month?: string; from?: string; to?: string }): Promise<Finance> {
   await openDb()
   const month = options.month ?? accountMonth((await preferences()).timezone)
-  const [start, end] = bounds(month)
-  const rows = await db.transactions.where('occurred_on').between(start, end, true, false).toArray()
+  // 区间查询两端都包含；按月的旧路径仍用 [本月首日, 下月首日) 的左闭右开区间。
+  const range: [string, string, boolean] = options.from && options.to
+    ? [options.from, options.to, true]
+    : [...bounds(month), false]
+  const [start, end, inclusive] = range
+  const rows = await db.transactions.where('occurred_on').between(start, end, true, inclusive).toArray()
   rows.sort((left, right) => right.occurred_on.localeCompare(left.occurred_on) ||
     (left.id < right.id ? 1 : left.id > right.id ? -1 : 0))
   return {
-    ...slicePage(rows, row => row.occurred_on, false, 'finance:' + month, options),
-    month,
+    ...slicePage(rows, row => row.occurred_on, false, 'finance:' + start, options),
+    month: start.slice(0, 7),
     totals: totals(rows),
     savings: await savings()
   }
