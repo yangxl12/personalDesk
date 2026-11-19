@@ -430,16 +430,22 @@ h2 { font-size: 16px; font-weight: 650; letter-spacing: -.012em; }
 }
 .period-value:focus-within { box-shadow: 0 0 0 3px var(--primary-soft); }
 .period-unit { color: var(--muted); font-size: 13px; font-weight: 600; }
+.period-label, .period-unit { transition: opacity .12s; }
 .period-input {
   min-width: 0; padding: 0; border: 0; border-radius: 8px;
   color: var(--ink); background: none; font: inherit; font-weight: 650; font-size: 15px;
   text-align: center; font-variant-numeric: tabular-nums;
 }
 .period-input:focus { outline: none; }
-.period-input.year { width: 2.35em; }
 .period-input::-webkit-inner-spin-button, .period-input::-webkit-outer-spin-button { display: none; }
 /* 铺满整块文字区域的透明原生控件：点哪里都能唤起系统日期选择器 */
 .period-input.picker { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+/* 年份的原生输入框同样铺满，但只在聚焦时显形——常态一律显示自己排的「2026年」，
+   宽度由内容决定，不会像原生 number 输入那样被裁掉最后一位 */
+.period-input.year { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: text; }
+.period-value:focus-within .period-input.year { opacity: 1; }
+.period-value:focus-within .period-label,
+.period-value:focus-within .period-unit { opacity: 0; }
 .period-scopes { display: flex; gap: 2px; padding: 2px; border: 1px solid var(--line); border-radius: 11px; background: var(--glass-2); }
 .period-scopes button {
   min-height: 26px; padding: 0 10px; border: 0; border-radius: 8px; background: none;

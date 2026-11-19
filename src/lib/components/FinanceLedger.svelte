@@ -63,6 +63,11 @@
     try { input.showPicker() } catch { /* 浏览器拦截或不支持时退回原生聚焦 */ }
   }
 
+  // 年份聚焦即全选，直接键入就把旧年份换掉，不用先删。
+  function selectAll(event: FocusEvent) {
+    ;(event.currentTarget as HTMLInputElement).select()
+  }
+
   async function load(from: string, to: string) {
     const token = ++sequence
     items = []
@@ -132,8 +137,10 @@
   }
 
   function setYear(event: Event) {
-    const value = Number((event.currentTarget as HTMLInputElement).value)
-    if (!Number.isInteger(value) || value < 1000 || value > 9999) return
+    const input = event.currentTarget as HTMLInputElement
+    const value = Number(input.value)
+    // 空值或越界就退回当前年份，避免输入框留个空壳
+    if (!Number.isInteger(value) || value < 1000 || value > 9999) { input.value = String(year); return }
     anchor = `${value}-${anchor.slice(5)}`
   }
 
@@ -175,8 +182,10 @@
     <button type="button" class="button icon-button period-step" aria-label={ui.t('上一段时间')} onclick={() => shift(-1)}><Icon name="chevronLeft" size={16} /></button>
     <span class="period-value">
       {#if scope === 'year'}
-        <input class="period-input year" type="number" min="1000" max="9999" step="1" value={year} aria-label={ui.t('年份')} onchange={setYear}>
+        <span class="period-label">{year}</span>
         {#if ui.preferences.language !== 'en'}<span class="period-unit">{ui.t('年')}</span>{/if}
+        <!-- 年份同样走「文字自己排 + 透明原生控件」：聚焦时原生控件才显形，接手编辑 -->
+        <input class="period-input year" type="number" min="1000" max="9999" step="1" value={year} aria-label={ui.t('年份')} onchange={setYear} onfocus={selectAll}>
       {:else}
         <span class="period-label">{label}</span>
         <input class="period-input picker" type={scope === 'month' ? 'month' : 'date'}
