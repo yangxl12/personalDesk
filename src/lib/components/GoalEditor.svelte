@@ -7,27 +7,33 @@
   import { useUi } from '#lib/ui.svelte'
   import Icon from './Icon.svelte'
 
-  let { goal, onclose }: { goal: DashboardGoal; onclose: () => void } = $props()
+  // 新建和编辑共用同一个弹窗：传 goal 就是编辑，不传就是新建。
+  let { goal = null, onclose }: { goal?: DashboardGoal | null; onclose: () => void } = $props()
   const ui = useUi()
   let dialog: HTMLDialogElement
-  let title = $state(untrack(() => goal.title))
+  let input = $state<HTMLInputElement>()
+  let title = $state(untrack(() => goal?.title ?? ''))
   let tasks = $state<GoalTask[]>([])
   let selected = $state<string[]>([])
-  let loading = $state(true)
+  let loading = $state(untrack(() => !!goal))
   let busy = $state(false)
   let message = $state('')
   let confirming = $state<'goal' | 'tasks' | null>(null)
 
   onMount(() => {
     dialog.showModal()
-    void load()
+    if (goal) void load()
+    // 新建时直接聚焦名称输入，省得再点一下。
+    else input?.focus()
     return lockScroll()
   })
 
   async function load() {
+    const id = goal?.id
+    if (!id) return
     loading = true
     try {
-      tasks = (await request<GoalTask[]>('/goals/' + goal.id + '/tasks')).data
+      tasks = (await request<GoalTask[]>('/goals/' + id + '/tasks')).data
     } catch (failure) {
       message = ui.error(failure)
     } finally {
@@ -54,13 +60,20 @@
     event.preventDefault()
     if (busy) return
     const next = title.trim()
-    if (next === goal.title && !selected.length) {
+    if (goal && next === goal.title && !selected.length) {
       onclose()
       return
     }
     busy = true
     message = ''
     try {
+      if (!goal) {
+        const created = await commit<Goal>('POST', '/goals', { title: next, description: '', tone: 'violet' }, randomId())
+        if (created.revisions) await refreshModules(created.revisions)
+        onclose()
+        ui.notify('已创建')
+        return
+      }
       // 目标版本会随任务增删变化，保存前取最新版本，避免同一次弹窗内的连续操作互相冲突。
       const latest = (await request<Goal>('/goals/' + goal.id)).data
       const result = await commit('PATCH', '/goals/' + goal.id, {
@@ -93,11 +106,13 @@
   }
 
   async function deleteGoal() {
+    const id = goal?.id
+    if (!id) return
     busy = true
     message = ''
     try {
-      const latest = (await request<Goal>('/goals/' + goal.id)).data
-      const result = await commit('DELETE', '/goals/' + goal.id, { version: latest.version, tasks: latest.total_tasks }, randomId())
+      const latest = (await request<Goal>('/goals/' + id)).data
+      const result = await commit('DELETE', '/goals/' + id, { version: latest.version, tasks: latest.total_tasks }, randomId())
       if (result.revisions) await refreshModules(result.revisions)
       onclose()
       ui.notify('已删除')
@@ -124,9 +139,9 @@
     <div class="dialog-fields">
       <p class="delete-copy">
         {confirming === 'goal'
-          ? goal.total_tasks
-            ? ui.t('删除「{title}」及其 {tasks} 个任务？', { title: goal.title, tasks: goal.total_tasks })
-            : ui.t('删除「{title}」？', { title: goal.title })
+          ? goal?.total_tasks
+            ? ui.t('删除「{title}」及其 {tasks} 个任务？', { title: goal?.title ?? '', tasks: goal?.total_tasks ?? 0 })
+            : ui.t('删除「{title}」？', { title: goal?.title ?? '' })
           : ui.t('删除选中的 {count} 个任务？', { count: selected.length })}
       </p>
       {#if message}<p class="form-error" role="alert">{message}</p>{/if}
@@ -139,14 +154,15 @@
   {:else}
     <form onsubmit={save}>
       <header class="dialog-head">
-        <h2 id="goal-editor-title">{ui.t('编辑目标')}</h2>
+        <h2 id="goal-editor-title">{ui.t(goal ? '编辑目标' : '新建目标')}</h2>
         <button type="button" class="button icon-button" aria-label={ui.t('关闭')} disabled={busy} onclick={onclose}><Icon name="close" size={18} /></button>
       </header>
       <div class="dialog-fields">
         <label class="field">
           <span>{ui.t('目标名称')}</span>
-          <input bind:value={title} required maxlength={120} aria-invalid={!!message}>
+          <input bind:this={input} bind:value={title} required maxlength={120} aria-invalid={!!message}>
         </label>
+        {#if goal}
         <div class="task-picker">
           <div class="task-picker-head">
             <span>{ui.t('任务')}</span>
@@ -173,11 +189,14 @@
             </ul>
           {/if}
         </div>
+        {/if}
         {#if message}<p class="form-error" role="alert">{message}</p>{/if}
       </div>
       <footer>
-        <button type="button" class="button icon-button footer-delete" aria-label={ui.t('删除目标')} disabled={busy}
-          onclick={() => { confirming = 'goal'; message = '' }}><Icon name="trash" size={17} /></button>
+        {#if goal}
+          <button type="button" class="button icon-button footer-delete" aria-label={ui.t('删除目标')} disabled={busy}
+            onclick={() => { confirming = 'goal'; message = '' }}><Icon name="trash" size={17} /></button>
+        {/if}
         <button type="button" class="button secondary" disabled={busy} onclick={onclose}>{ui.t('取消')}</button>
         <button type="submit" class="button primary" disabled={busy}>{ui.t(busy ? '正在保存…' : '保存')}</button>
       </footer>

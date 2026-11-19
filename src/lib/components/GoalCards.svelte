@@ -2,7 +2,7 @@
   import { onMount } from 'svelte'
   import type { DashboardGoal } from '#lib/contracts/workspace'
   import { useUi } from '#lib/ui.svelte'
-  import { createGoal, createTask } from '#lib/editors'
+  import { createTask } from '#lib/editors'
   import Icon from './Icon.svelte'
   import TaskList from './TaskList.svelte'
   import GoalEditor from './GoalEditor.svelte'
@@ -10,6 +10,8 @@
   let { goals }: { goals: DashboardGoal[] } = $props()
   const ui = useUi()
   let editing = $state<DashboardGoal | null>(null)
+  // 新建和编辑复用 GoalEditor：editing 为空但 creating 为真时就是新建。
+  let creating = $state(false)
   let rail = $state<HTMLElement | null>(null)
   let track = $state<HTMLElement | null>(null)
   let scrollable = $state(false)
@@ -96,7 +98,7 @@
             <div class="goal-card-actions">
               <button type="button" class="button icon-button" aria-label={ui.t('发给 AI')} onclick={() => ui.attach({ kind: 'goal', id: goal.id, label: goal.title })}><Icon name="spark" size={16} /></button>
               <button type="button" class="button icon-button" aria-label={ui.t('新建任务')} onclick={() => createTask(ui, goal.id)}><Icon name="plus" size={17} /></button>
-              <button type="button" class="button icon-button" aria-label={ui.t('编辑目标')} onclick={() => { editing = goal }}><Icon name="edit" size={16} /></button>
+              <button type="button" class="button icon-button" aria-label={ui.t('编辑目标')} onclick={() => { editing = goal; creating = false }}><Icon name="edit" size={16} /></button>
             </div>
           </header>
           <div class="goal-board-body">
@@ -108,7 +110,7 @@
           </div>
         </article>
       {/each}
-      <button type="button" class="card goal-add-card goal-slide" aria-label={ui.t('新建目标')} onclick={() => createGoal(ui)}>
+      <button type="button" class="card goal-add-card goal-slide" aria-label={ui.t('新建目标')} onclick={() => { editing = null; creating = true }}>
         <span class="goal-add-mark"><Icon name="plus" size={34} /></span>
       </button>
     </section>
@@ -128,10 +130,10 @@
   </div>
 {:else}
   <section class="card dashboard-goals goal-empty">
-    <button type="button" class="goal-empty-add" aria-label={ui.t('新建目标')} onclick={() => createGoal(ui)}><Icon name="plus" size={42} /></button>
+    <button type="button" class="goal-empty-add" aria-label={ui.t('新建目标')} onclick={() => { editing = null; creating = true }}><Icon name="plus" size={42} /></button>
   </section>
 {/if}
 
-{#if editing}
-  {#key editing.id}<GoalEditor goal={editing} onclose={() => { editing = null }} />{/key}
+{#if creating || editing}
+  {#key editing?.id ?? 'new'}<GoalEditor goal={editing} onclose={() => { editing = null; creating = false }} />{/key}
 {/if}

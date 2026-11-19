@@ -2,15 +2,6 @@ import { decimal, today, type Note, type NoteSummary, type Savings, type Transac
 import type { WorkspaceUi } from '#lib/ui.svelte'
 import { request } from '#lib/client'
 
-export function createGoal(ui: WorkspaceUi) {
-  ui.open({
-    title: '新建目标',
-    path: '/goals',
-    method: 'POST',
-    fields: [{ name: 'title', label: '目标名称', required: true }]
-  })
-}
-
 export function createTask(ui: WorkspaceUi, goalId: string) {
   ui.open({
     title: '新建任务',
