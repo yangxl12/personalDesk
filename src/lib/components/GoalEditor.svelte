@@ -3,6 +3,7 @@
   import { commit, refreshModules, request } from '#lib/client'
   import type { DashboardGoal, Goal, GoalTask, Revisions } from '#lib/contracts/workspace'
   import { randomId } from '#lib/random-id'
+  import { lockScroll } from '#lib/scroll-lock'
   import { useUi } from '#lib/ui.svelte'
   import Icon from './Icon.svelte'
 
@@ -20,6 +21,7 @@
   onMount(() => {
     dialog.showModal()
     void load()
+    return lockScroll()
   })
 
   async function load() {

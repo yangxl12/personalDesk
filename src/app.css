@@ -55,6 +55,10 @@
   --savings-bg: var(--glass-2);
   --control-border: var(--line-strong);
 
+  /* 弹窗：实色，不跟背景透 */
+  --dialog-bg: #fcfbff;
+  --panel: #f3f2fb;
+
   --radius: 24px;
   --radius-sm: 14px;
   --blur: 26px;
@@ -113,6 +117,9 @@
   --inset: var(--glass-2);
   --savings-bg: var(--glass-2);
   --control-border: var(--line-strong);
+
+  --dialog-bg: #17162a;
+  --panel: #232138;
 }
 
 /* --------------------------------------------------------------------------
@@ -591,10 +598,10 @@ progress::-moz-progress-bar { background: linear-gradient(90deg, var(--primary-f
 .badge { display: inline-flex; font-size: 11px; font-weight: 650; letter-spacing: .03em; border-radius: 999px; background: var(--primary-soft); color: var(--primary); padding: 5px 11px; white-space: nowrap; }
 .badge.complete { color: var(--positive); background: var(--positive-soft); }
 
-.month-field input { max-width: 155px; padding: 8px 11px; border: 1px solid var(--line); border-radius: 11px; color: var(--ink); background: var(--glass-2); font-size: 12px; }
+.month-field input { max-width: 155px; padding: 8px 11px; border: 1px solid var(--line); border-radius: 11px; color: var(--ink); background: var(--panel); font-size: 12px; }
 .ledger-dialog { width: min(660px, calc(100% - 24px)); }
 .ledger-tools { display: flex; align-items: center; gap: 10px; }
-.ledger-body { padding: 6px 24px 14px; max-height: calc(100dvh - 220px); overflow-y: auto; scrollbar-width: thin; }
+.ledger-body { padding: 6px 24px 14px; max-height: calc(100dvh - 220px); overflow-y: auto; scrollbar-width: thin; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
 .ledger-note { padding: 28px 0; text-align: center; color: var(--muted); }
 .ledger-more { display: flex; margin: 14px auto 2px; }
 .footer-add { margin-right: auto; }
@@ -619,13 +626,13 @@ progress::-moz-progress-bar { background: linear-gradient(90deg, var(--primary-f
 
 dialog {
   width: min(500px, calc(100% - 24px)); max-height: calc(100dvh - 28px); padding: 0;
-  border: 1px solid var(--glass-border); border-radius: 26px;
-  color: var(--ink); background: var(--glass-strong);
-  backdrop-filter: blur(36px) saturate(175%);
-  -webkit-backdrop-filter: blur(36px) saturate(175%);
+  border: 1px solid var(--line-strong); border-radius: 26px;
+  color: var(--ink); background: var(--dialog-bg);
+  overflow-y: auto; overscroll-behavior: contain;
   box-shadow: 0 42px 100px -30px rgba(30, 20, 70, .42), inset 0 1px 0 var(--glass-edge);
 }
-dialog::backdrop { background: rgba(24, 20, 48, .32); backdrop-filter: blur(10px) saturate(120%); -webkit-backdrop-filter: blur(10px); }
+/* 遮罩只负责压暗，不动背景内容；弹窗本体是实色，不会透出页面文字 */
+dialog::backdrop { background: rgba(24, 20, 48, .48); backdrop-filter: blur(8px) saturate(120%); -webkit-backdrop-filter: blur(8px); }
 [data-theme="dark"] dialog::backdrop { background: rgba(4, 4, 12, .55); }
 dialog[open] { animation: dialog-in .38s var(--ease) both; }
 dialog[open]::backdrop { animation: fade-in .38s both; }
@@ -637,14 +644,14 @@ dialog[open]::backdrop { animation: fade-in .38s both; }
 .field small { margin-left: 3px; font-weight: 400; }
 .field input, .field textarea, .field select {
   padding: 12px 14px; border: 1px solid var(--line); border-radius: 13px; min-height: 46px; width: 100%;
-  color: var(--ink); background: var(--glass-2); font-weight: 400;
+  color: var(--ink); background: var(--panel); font-weight: 400;
   box-shadow: inset 0 1px 2px rgba(30, 20, 70, .04);
   transition: border-color .25s, box-shadow .25s, background-color .25s;
 }
 [data-theme="dark"] .field input, [data-theme="dark"] .field textarea, [data-theme="dark"] .field select { box-shadow: inset 0 1px 2px rgba(0, 0, 0, .2); }
 .field textarea { resize: vertical; line-height: 1.65; }
 .field input:focus, .field textarea:focus, .field select:focus,
-dialog .month-field input:focus { border-color: var(--primary); background: var(--glass); box-shadow: 0 0 0 4px var(--primary-soft); }
+dialog .month-field input:focus { border-color: var(--primary); background: var(--panel); box-shadow: 0 0 0 4px var(--primary-soft); }
 .field input::placeholder, .field textarea::placeholder { color: var(--faint); }
 
 .type-field { margin: 0; padding: 0; border: none; }
@@ -652,7 +659,7 @@ dialog .month-field input:focus { border-color: var(--primary); background: var(
 .type-field > div { display: flex; gap: 9px; }
 .type-field label { position: relative; flex: 1; }
 .type-field input { position: absolute; opacity: 0; }
-.type-field span { display: block; padding: 10px; border-radius: 12px; border: 1px solid var(--line); background: var(--glass-2); text-align: center; cursor: pointer; font-weight: 500; transition: border-color .25s, background-color .25s, color .25s; }
+.type-field span { display: block; padding: 10px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel); text-align: center; cursor: pointer; font-weight: 500; transition: border-color .25s, background-color .25s, color .25s; }
 .type-field input:checked + span { border-color: var(--primary-tint); background: var(--primary-soft); color: var(--primary); font-weight: 650; box-shadow: inset 0 0 0 1px var(--primary-tint); }
 .type-field input:focus-visible + span { outline: 2px solid var(--primary); outline-offset: 2px; }
 .field-hint { color: var(--muted); font-size: 12.5px; line-height: 1.6; }
@@ -670,8 +677,9 @@ dialog .month-field input:focus { border-color: var(--primary); background: var(
 }
 .task-picker-list {
   display: grid; gap: 2px; max-height: 220px; overflow-y: auto; scrollbar-width: thin;
+  overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
   margin: 0; padding: 6px; list-style: none;
-  background: var(--glass-2); border: 1px solid var(--line); border-radius: 14px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
 }
 .task-picker-row { display: flex; align-items: center; gap: 11px; padding: 9px 10px; border-radius: 10px; cursor: pointer; font-weight: 400; transition: background-color .2s; }
 .task-picker-row:hover { background: var(--primary-soft); }
@@ -946,6 +954,9 @@ dialog footer { display: flex; justify-content: flex-end; gap: 9px; padding: 15p
     --inset: var(--glass-2);
     --savings-bg: var(--glass-2);
     --control-border: var(--line-strong);
+
+    --dialog-bg: #17162a;
+    --panel: #232138;
   }
   [data-theme="system"] .violet { --tone: #b1a2f7; --tone-soft: var(--primary-soft); }
   [data-theme="system"] .mint { --tone: #71d6b1; --tone-soft: var(--positive-soft); }

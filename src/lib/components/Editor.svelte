@@ -2,6 +2,7 @@
   import { randomId } from '#lib/random-id'
   import { onMount } from 'svelte'
   import { RequestError } from '#lib/client'
+  import { lockScroll } from '#lib/scroll-lock'
   import { useUi, type EditorSpec } from '#lib/ui.svelte'
   import Icon from './Icon.svelte'
 
@@ -17,6 +18,7 @@
 
   onMount(() => {
     dialog.showModal()
+    return lockScroll()
   })
 
   async function submit(event: SubmitEvent) {

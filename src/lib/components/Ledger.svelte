@@ -4,6 +4,7 @@
   import { request } from '#lib/client'
   import { useUi } from '#lib/ui.svelte'
   import { editTransaction, remove } from '#lib/editors'
+  import { lockScroll } from '#lib/scroll-lock'
   import Icon from './Icon.svelte'
   import Empty from './Empty.svelte'
 
@@ -20,6 +21,7 @@
   onMount(() => {
     dialog.showModal()
     void load(month)
+    return lockScroll()
   })
 
   async function load(target: string) {
