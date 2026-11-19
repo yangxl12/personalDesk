@@ -24,8 +24,10 @@
   let loading = $state(untrack(() => !!goal))
   let busy = $state(false)
   let message = $state('')
-  // 批量清空后的一次性提示：列表空了也要让用户知道刚才发生了什么。
+  // 批量删除后的一次性提示：列表空了也要让用户知道刚才发生了什么。
   let notice = $state('')
+  // 勾选中的草稿行（存 key，改名不影响）。
+  let selected = $state<string[]>([])
   let confirming = $state(false)
   // 已落库、待删除的任务：id → 版本号。
   let removed = $state<Record<string, number>>({})
@@ -55,6 +57,7 @@
         savedTitle: task.title, savedDone: !!task.done
       }))
       removed = {}
+      selected = []
       notice = ''
     } catch (failure) {
       message = ui.error(failure)
@@ -77,17 +80,32 @@
   function removeRow(row: Draft) {
     if (row.id) removed = { ...removed, [row.id]: row.version }
     rows = rows.filter(item => item.key !== row.key)
+    selected = selected.filter(key => key !== row.key)
   }
 
-  // 批量清空：整批记进待删除，保存时统一落库；直接取消弹窗则原样丢弃，不留半截数据。
-  function clearRows() {
-    const count = rows.length
-    if (!count) return
+  function isSelected(row: Draft) {
+    return selected.includes(row.key)
+  }
+
+  function toggleRow(row: Draft) {
+    selected = isSelected(row) ? selected.filter(key => key !== row.key) : [...selected, row.key]
+  }
+
+  // 批量删除选中的行：落库过的记进 removed（保存时统一 DELETE），新建或改过的直接丢弃。
+  function deleteSelected() {
+    if (!selected.length) return
+    const keys = new Set(selected)
     const next = { ...removed }
-    for (const row of rows) if (row.id) next[row.id] = row.version
+    let count = 0
+    for (const row of rows) {
+      if (!keys.has(row.key)) continue
+      if (row.id) next[row.id] = row.version
+      count++
+    }
     removed = next
-    rows = []
-    notice = ui.t('已清空 {count} 个任务，保存后生效。', { count })
+    rows = rows.filter(row => !keys.has(row.key))
+    selected = []
+    notice = ui.t('已删除 {count} 个任务，保存后生效。', { count })
   }
 
   async function deleteTask(id: string, version: number, revisions: Revisions) {
@@ -224,8 +242,12 @@
           <div class="task-picker-head">
             <span>{ui.t('任务')}</span>
             <div class="task-picker-tools">
-              <button type="button" class="button icon-button task-picker-clear" aria-label={ui.t('删除全部任务')}
-                title={ui.t('删除全部任务')} disabled={busy || loading || !rows.length} onclick={clearRows}>
+              {#if selected.length}
+                <span class="task-picker-selected">{ui.t('已选 {count} 项', { count: selected.length })}</span>
+              {/if}
+              <button type="button" class="button icon-button task-picker-clear" class:armed={selected.length > 0}
+                aria-label={ui.t('删除选中的任务')} title={ui.t('删除选中的任务')}
+                disabled={busy || loading || !selected.length} onclick={deleteSelected}>
                 <Icon name="trash" size={16} />
               </button>
               <button type="button" class="button icon-button" aria-label={ui.t('添加任务')} disabled={busy || loading} onclick={() => void addRow()}>
@@ -240,9 +262,9 @@
           {:else}
             <ul class="task-picker-list" bind:this={list}>
               {#each rows as row (row.key)}
-                <li class="task-picker-row">
-                  <input type="checkbox" checked={row.done} aria-label={ui.t('标记完成')}
-                    onchange={(event) => { row.done = event.currentTarget.checked }}>
+                <li class="task-picker-row" class:selected={isSelected(row)}>
+                  <input type="checkbox" checked={isSelected(row)} aria-label={ui.t('选择任务')}
+                    onchange={() => toggleRow(row)}>
                   <input class="goal-task-input" class:done={row.done} bind:value={row.title}
                     maxlength={120} placeholder={ui.t('任务名称')} aria-label={ui.t('任务名称')}>
                   <button type="button" class="button icon-button goal-task-remove" aria-label={ui.t('删除任务')}

@@ -802,9 +802,12 @@ dialog[open]::backdrop { animation: fade-in .38s both; }
 .task-picker-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .task-picker-head > span { font-weight: 600; font-size: 13px; }
 .task-picker-tools { display: flex; align-items: center; gap: 2px; }
+.task-picker-selected { padding-right: 4px; color: var(--muted); font-size: 11.5px; font-variant-numeric: tabular-nums; }
 .task-picker-head .icon-button { width: 32px; min-height: 32px; border-radius: 10px; color: var(--muted); }
 .task-picker-head .icon-button:hover:not(:disabled) { color: var(--primary); background: var(--primary-soft); }
 .task-picker-head .task-picker-clear:hover:not(:disabled) { color: var(--negative); background: var(--negative-soft); }
+/* 有勾选时才点亮批量删除，平时保持安静 */
+.task-picker-head .task-picker-clear.armed:not(:disabled) { color: var(--negative); background: var(--negative-soft); }
 .task-picker-list {
   display: grid; gap: 2px; max-height: 220px; overflow-y: auto; scrollbar-width: thin;
   overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
@@ -813,6 +816,9 @@ dialog[open]::backdrop { animation: fade-in .38s both; }
 }
 .task-picker-row { display: flex; align-items: center; gap: 6px; padding: 3px 4px; border-radius: 10px; font-weight: 400; transition: background-color .2s; }
 .task-picker-row:hover, .task-picker-row:focus-within { background: var(--primary-soft); }
+/* 勾选中的行常驻高亮，一眼看出批量删除会删掉哪几条 */
+.task-picker-row.selected { background: var(--primary-soft); }
+.task-picker-row.selected:hover, .task-picker-row.selected:focus-within { background: var(--primary-tint); }
 .task-picker-row > input[type="checkbox"] {
   flex: none; width: 17px; height: 17px; margin: 0 3px; accent-color: var(--primary-fill); cursor: pointer;
 }
