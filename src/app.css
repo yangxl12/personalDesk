@@ -775,8 +775,10 @@ dialog footer { display: flex; justify-content: flex-end; gap: 9px; padding: 15p
    设置
    -------------------------------------------------------------------------- */
 
-.settings-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; align-items: start; max-width: 980px; }
-.settings-card .section-head { padding-bottom: 16px; margin-bottom: 20px; border-bottom: 1px solid var(--line); }
+.card.settings-panel { display: grid; gap: 0; max-width: 620px; padding: 0; margin-inline: auto; }
+.settings-block { padding: 24px; }
+.settings-block + .settings-block { border-top: 1px solid var(--line); }
+.settings-block .section-head { padding-bottom: 16px; margin-bottom: 20px; border-bottom: 1px solid var(--line); }
 .theme-picker { border: 0; padding: 0; margin: 0; min-width: 0; }
 .theme-picker legend { padding: 0; margin-bottom: 10px; font-weight: 600; font-size: 13px; }
 .theme-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; }
@@ -850,7 +852,7 @@ dialog footer { display: flex; justify-content: flex-end; gap: 9px; padding: 15p
 }
 
 @container (max-width: 760px) {
-  .dashboard-grid, .settings-grid { grid-template-columns: 1fr; }
+  .dashboard-grid { grid-template-columns: 1fr; }
   .finance-body { grid-template-columns: 1fr; gap: 14px; }
   .stat strong { font-size: clamp(15px, 3cqi, 21px); }
 }
@@ -859,6 +861,8 @@ dialog footer { display: flex; justify-content: flex-end; gap: 9px; padding: 15p
   .note-grid { grid-template-columns: 1fr; gap: 9px; }
   .page-head { flex-direction: column; align-items: flex-start; gap: 12px; }
   .card { padding: 18px; }
+  .card.settings-panel { padding: 0; }
+  .settings-block { padding: 18px; }
   .section-actions { gap: 6px; }
   .notes-card .section-actions .text-link { display: none; }
   .ledger-button { padding-inline: 10px; }

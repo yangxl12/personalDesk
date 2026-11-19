@@ -19,7 +19,7 @@
   }
 </script>
 
-<section class="card settings-card">
+<section class="settings-block">
   <header class="section-head"><h2><span class="section-icon"><Icon name="install" /></span>{ui.t('安装到桌面')}</h2></header>
   <div class="model-form">
     {#if installState === 'installed'}

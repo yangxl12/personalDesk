@@ -84,7 +84,7 @@
   }
 </script>
 
-<section id="ai-settings" class="card settings-card" aria-labelledby="ai-settings-heading">
+<section id="ai-settings" class="settings-block" aria-labelledby="ai-settings-heading">
   <header class="section-head">
     <h2 id="ai-settings-heading"><span class="section-icon"><Icon name="spark" /></span>{ui.t('AI 设置')}</h2>
     {#if baseline}

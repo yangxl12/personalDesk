@@ -99,9 +99,9 @@
   </button>
   <h1>{ui.t('设置')}</h1>
 </header>
-<div class="settings-grid">
+<div class="card settings-panel">
   <ModelSettings settings={data.modelSettings} />
-  <section class="card settings-card">
+  <section class="settings-block">
     <header class="section-head"><h2><span class="section-icon"><Icon name="settings" /></span>{ui.t('个人偏好')}</h2></header>
       <form class="model-form" onsubmit={save}>
         <fieldset class="theme-picker" disabled={busy || !!pendingAppearance}>

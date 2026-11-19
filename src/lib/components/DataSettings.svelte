@@ -86,7 +86,7 @@
   }
 </script>
 
-<section class="card settings-card data-card">
+<section class="settings-block">
   <header class="section-head"><h2><span class="section-icon"><Icon name="book" /></span>{ui.t('数据管理')}</h2></header>
   <div class="data-actions">
     <div class="data-action">
@@ -150,8 +150,7 @@
 </section>
 
 <style>
-  .data-card { grid-column: 1 / -1; }
-  .data-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(252px, 1fr)); gap: 10px; }
+  .data-actions { display: grid; gap: 10px; }
   .data-action {
     display: flex; align-items: center; gap: 12px; min-width: 0; padding: 14px;
     border: 1px solid var(--line); border-radius: 16px; background: var(--glass-2);
