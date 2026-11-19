@@ -88,8 +88,9 @@
   <header class="section-head">
     <h2 id="ai-settings-heading"><span class="section-icon"><Icon name="spark" /></span>{ui.t('AI 设置')}</h2>
     {#if baseline}
-      <button class="button secondary add-model" type="button" disabled={!!busy || !!editor} onclick={() => openEditor()}>
-        <Icon name="plus" size={16} />{ui.t('添加模型')}
+      <button class="button secondary icon-button add-model" type="button" aria-label={ui.t('添加模型')} title={ui.t('添加模型')}
+        disabled={!!busy || !!editor} onclick={() => openEditor()}>
+        <Icon name="plus" size={18} />
       </button>
     {/if}
   </header>
@@ -174,8 +175,8 @@
 </section>
 
 <style>
-  #ai-settings { min-width: 0; scroll-margin-top: 82px; }
-  .add-model { gap: 5px; white-space: nowrap; }
+  #ai-settings { min-width: 0; scroll-margin-top: 24px; }
+  .add-model { border-radius: 50%; }
   .model-list { display: grid; gap: 8px; list-style: none; padding: 0; margin: 0; }
   .model-list li { display: flex; align-items: center; flex-wrap: wrap; gap: 9px 12px; padding: 12px 13px; border: 1px solid var(--border); border-radius: 16px; background: var(--glass-2); box-shadow: inset 0 1px 0 var(--glass-edge); }
   .model-list li.active { border-color: var(--primary); }

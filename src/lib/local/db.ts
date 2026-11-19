@@ -110,9 +110,9 @@ export const defaultPreferences: Preferences = {
   theme: 'system',
   language: 'zh-CN',
   timezone: 'Asia/Shanghai',
-  ai_goals: 0,
-  ai_notes: 0,
-  ai_finance: 0,
+  ai_goals: 1,
+  ai_notes: 1,
+  ai_finance: 1,
   ai_version: 1,
   version: 1
 }
@@ -170,8 +170,12 @@ export function openDb(): Promise<void> {
 }
 
 async function ensureSingleton() {
-  if (!(await db.preferences.get('default'))) {
+  const row = await db.preferences.get('default')
+  if (!row) {
     await db.preferences.put({ id: 'default', ...defaultPreferences })
+  } else if (row.ai_goals !== 1 || row.ai_notes !== 1 || row.ai_finance !== 1) {
+    // AI 数据访问不再提供开关，历史数据里关掉的旧值一律放开。
+    await db.preferences.put({ ...row, ai_goals: 1, ai_notes: 1, ai_finance: 1 })
   }
   if (!(await db.savings.get('default'))) {
     await db.savings.put({ id: 'default', ...defaultSavings })

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { randomId } from '#lib/random-id'
-  import { invalidate } from '$app/navigation'
+  import { goto, invalidate } from '$app/navigation'
+  import { resolve } from '$app/paths'
   import { useUi } from '#lib/ui.svelte'
   import { commit, refreshModules, RequestError } from '#lib/client'
   import type { Preferences } from '#lib/contracts/workspace'
@@ -20,16 +21,21 @@
   let pendingAppearance = $state<Appearance | null>(null)
   let appearanceFailure = $state('')
   let timezone = $state('')
-  const access = [['ai_goals', '目标管理'], ['ai_notes', '思考记录'], ['ai_finance', '财务概览']] as const
-  let selectedAccess = $state({ ai_goals: 0, ai_notes: 0, ai_finance: 0 })
+  // AI 数据访问开关已取消，一律放开；写回时固定带上，旧数据里的 0 也能被覆盖掉。
+  const access = { ai_goals: 1, ai_notes: 1, ai_finance: 1 } as const
   let current = $state<Preferences | null>(null)
   let attempt: { fingerprint: string; key: string } | undefined
 
   $effect(() => {
     if (dirty) return
     timezone = ui.preferences.timezone
-    selectedAccess = { ai_goals: ui.preferences.ai_goals, ai_notes: ui.preferences.ai_notes, ai_finance: ui.preferences.ai_finance }
   })
+
+  function back() {
+    // 从别处进来就退回去；直接打开设置页（PWA / 刷新）时退回工作台。
+    if (history.length > 1) history.back()
+    else void goto(resolve(''))
+  }
 
   function markDirty() {
     if (!dirty) baseVersion = ui.preferences.version
@@ -47,11 +53,11 @@
 
   async function saveAppearance(changes: Partial<Appearance>) {
     if (busy || pendingAppearance) return
-    const { theme, language, timezone, ai_goals, ai_notes, ai_finance, version } = ui.preferences
+    const { theme, language, timezone, version } = ui.preferences
     pendingAppearance = { theme, language, ...changes }
     appearanceFailure = ''
     try {
-      const saved = await persist({ ...pendingAppearance, timezone, ai_goals, ai_notes, ai_finance, version })
+      const saved = await persist({ ...pendingAppearance, timezone, ...access, version })
       if (dirty && baseVersion === version) baseVersion = saved.version
       if (current) current = ui.preferences
     } catch (error) {
@@ -67,8 +73,7 @@
     if (busy || pendingAppearance || current) return
     const values = new FormData(event.currentTarget as HTMLFormElement)
     const { theme, language } = ui.preferences
-    const body = { theme, language, timezone: String(values.get('timezone') ?? ''),
-      ai_goals: Number(values.has('ai_goals')), ai_notes: Number(values.has('ai_notes')), ai_finance: Number(values.has('ai_finance')),
+    const body = { theme, language, timezone: String(values.get('timezone') ?? ''), ...access,
       version: baseVersion || ui.preferences.version }
     busy = true
     failure = ''
@@ -88,7 +93,12 @@
   }
 </script>
 
-<header class="page-head"><h1>{ui.t('设置')}</h1></header>
+<header class="page-bar">
+  <button class="button icon-button" type="button" aria-label={ui.t('返回')} title={ui.t('返回')} onclick={back}>
+    <Icon name="chevronLeft" size={20} />
+  </button>
+  <h1>{ui.t('设置')}</h1>
+</header>
 <div class="settings-grid">
   <ModelSettings settings={data.modelSettings} />
   <section class="card settings-card">
@@ -98,8 +108,9 @@
           <legend>{ui.t('主题')}</legend>
           <div class="theme-options">
             {#each themes as [value, icon, label]}
-              <label><input type="radio" name="theme" {value} checked={(pendingAppearance ?? ui.preferences).theme === value}
-                onchange={() => saveAppearance({ theme: value })}><span><Icon name={icon} size={18} />{ui.t(label)}</span></label>
+              <label title={ui.t(label)}><input type="radio" name="theme" {value} aria-label={ui.t(label)}
+                checked={(pendingAppearance ?? ui.preferences).theme === value}
+                onchange={() => saveAppearance({ theme: value })}><span><Icon name={icon} size={18} /></span></label>
             {/each}
           </div>
         </fieldset>
@@ -126,17 +137,6 @@
             failure = ''
           }}>{ui.t('保留草稿并采用最新版本')}</button>
         {/if}
-        <fieldset class="access-options" disabled={busy}>
-          <legend>{ui.t('AI 数据访问')}</legend>
-          <p class="field-hint">{ui.t('启用后，相关记录可能随对话发送给当前模型供应商。')}</p>
-          {#each access as [name, label]}
-            <label><input type="checkbox" {name} checked={!!(dirty ? selectedAccess[name] : ui.preferences[name])}
-              onchange={event => {
-                selectedAccess[name] = Number(event.currentTarget.checked)
-                markDirty()
-              }}>{ui.t(label)}</label>
-          {/each}
-        </fieldset>
         <button class="button primary" type="submit" disabled={busy || !!pendingAppearance || !!current}>{ui.t('保存')}</button>
       </form>
   </section>

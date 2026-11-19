@@ -6,7 +6,6 @@
   import { provideUi } from '#lib/ui.svelte'
   import { pwa, syncThemeColor } from '#lib/pwa.svelte'
   import Icon from '#lib/components/Icon.svelte'
-  import Brand from '#lib/components/Brand.svelte'
   import Editor from '#lib/components/Editor.svelte'
 
   let { data, children } = $props()
@@ -72,7 +71,8 @@
     if (ui.chatOpen) previouslyFocused = document.activeElement as HTMLElement | null
   })
   const titles: Record<string, string> = { '': '工作台', '/chats': 'AI 对话历史', '/settings': '设置' }
-  let title = $derived(titles[(page.route.id ?? '').replace(/^\/\(app\)/, '')] ?? '工作台')
+  const path = $derived((page.route.id ?? '').replace(/^\/\(app\)/, ''))
+  let title = $derived(titles[path] ?? '工作台')
 
   $effect(() => {
     document.documentElement.dataset.theme = data.preferences.theme
@@ -116,17 +116,17 @@
 
 <div class="shell">
   <div class="workspace" inert={mobile && ui.chatOpen}>
-    <header class="topbar">
-      <Brand label={ui.t('步序')} />
-      <div class="topbar-actions">
+    <!-- 顶栏去掉后只留右上角两个悬浮按钮；设置页有自己的顶栏，不再重复给设置入口。 -->
+    <div class="float-actions">
+      {#if path !== '/settings'}
         <a class="button icon-button" href={resolve('settings')} aria-label={ui.t('设置')} title={ui.t('设置')}><Icon name="settings" size={19} /></a>
-        <button bind:this={aiButton} class="button icon-button ai-toggle" class:active={ui.chatOpen} type="button"
-          aria-label={ui.t(ui.aiRunning ? 'AI 正在生成' : 'AI 助手')} aria-expanded={ui.chatOpen} onclick={openChat}>
-          <Icon name="ai" size={21} />
-          {#if ui.aiRunning}<span class="ai-dot" aria-hidden="true"></span>{/if}
-        </button>
-      </div>
-    </header>
+      {/if}
+      <button bind:this={aiButton} class="button icon-button ai-toggle" class:active={ui.chatOpen} type="button"
+        aria-label={ui.t(ui.aiRunning ? 'AI 正在生成' : 'AI 助手')} aria-expanded={ui.chatOpen} onclick={openChat}>
+        <Icon name="ai" size={21} />
+        {#if ui.aiRunning}<span class="ai-dot" aria-hidden="true"></span>{/if}
+      </button>
+    </div>
     <main id="main" tabindex="-1">{@render children()}</main>
   </div>
   {#if panel}{@const Panel = panel}<Panel close={closeChat} {mobile} />{/if}

@@ -50,9 +50,9 @@ export const inputs = {
         return false
       }
     }, '请输入有效的 IANA 时区'),
-    ai_goals: z.number().int().min(0).max(1).default(0),
-    ai_notes: z.number().int().min(0).max(1).default(0),
-    ai_finance: z.number().int().min(0).max(1).default(0),
+    ai_goals: z.number().int().min(0).max(1).default(1),
+    ai_notes: z.number().int().min(0).max(1).default(1),
+    ai_finance: z.number().int().min(0).max(1).default(1),
     version
   })
 }

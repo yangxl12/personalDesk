@@ -104,7 +104,7 @@ export async function exportBackup() {
       }
       : {
         theme: 'system', language: 'zh-CN', timezone: 'Asia/Shanghai',
-        ai_goals: 0, ai_notes: 0, ai_finance: 0, ai_version: 1, version: 1
+        ai_goals: 1, ai_notes: 1, ai_finance: 1, ai_version: 1, version: 1
       },
     chats,
     messages
