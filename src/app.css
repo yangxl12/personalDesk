@@ -294,7 +294,7 @@ h2 { font-size: 16px; font-weight: 650; letter-spacing: -.012em; }
 .icon-button[data-action^="delete"]:hover { color: var(--negative); background: var(--negative-soft); }
 .float-actions .ai-toggle { position: relative; color: var(--primary); }
 
-.text-link { color: var(--primary); font-weight: 650; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; min-height: 34px; white-space: nowrap; }
+.text-link { color: var(--primary); font-weight: 650; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; min-height: 34px; white-space: nowrap; border: 0; padding: 0; background: none; cursor: pointer; }
 .text-link:hover { text-decoration: underline; text-underline-offset: 3px; }
 .text-link svg { transition: transform .3s var(--ease); }
 .text-link:hover svg { transform: translateX(3px); }
@@ -335,17 +335,79 @@ h2 { font-size: 16px; font-weight: 650; letter-spacing: -.012em; }
 }
 
 /* --------------------------------------------------------------------------
-   工作台版式
+   工作台版式：整屏三块大卡片，只靠底部三个图标按钮切换
    -------------------------------------------------------------------------- */
 
-.dashboard-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--stack-gap, 22px); }
-.dashboard-grid > * { animation: rise .75s var(--ease) both; }
-.dashboard-grid > :nth-child(1) { animation-delay: .02s; }
-.dashboard-grid > :nth-child(2) { animation-delay: .08s; }
-.dashboard-grid > :nth-child(3) { animation-delay: .14s; }
+#main:has(.home-page) {
+  display: flex; flex-direction: column;
+  max-width: 1180px;
+  /* 整页锁一屏，滚动留给每块卡片自己 */
+  height: calc(100dvh - var(--top-gap) - env(safe-area-inset-top, 0px));
+  padding-bottom: 0;
+}
+.home-page {
+  display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; overflow: hidden;
+  /* 底部图标按钮是固定定位，这里留出它占的高度 */
+  padding-bottom: calc(70px + env(safe-area-inset-bottom, 0px));
+}
+.home-track { display: flex; flex: 1 1 auto; min-height: 0; transition: transform .55s var(--ease); }
+.home-slide { display: flex; flex-direction: column; flex: 0 0 100%; min-width: 0; min-height: 0; }
+.home-card { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; overflow: hidden; }
+.home-scroll {
+  flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch; scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent;
+}
 
-.dashboard-goals { grid-column: 1 / -1; min-width: 0; }
-.goal-rail { position: relative; grid-column: 1 / -1; min-width: 0; }
+/* 底部图标栏：和右上角悬浮按钮同一套玻璃质感 */
+.home-dock {
+  position: fixed; z-index: 6; left: 50%; bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  display: flex; align-items: center; gap: 10px;
+}
+.home-dock-button {
+  display: grid; place-items: center; width: 46px; height: 46px; padding: 0; border-radius: 50%;
+  color: var(--muted); background: var(--glass);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(18px) saturate(165%);
+  -webkit-backdrop-filter: blur(18px) saturate(165%);
+  box-shadow: 0 12px 26px -16px rgba(40, 28, 90, .5), inset 0 1px 0 var(--glass-edge);
+  transition: color .25s, border-color .25s, box-shadow .35s var(--ease), transform .35s var(--ease);
+}
+.home-dock-button:hover { color: var(--primary); }
+.home-dock-button[aria-current="true"] {
+  color: #fff; border-color: transparent;
+  background: linear-gradient(135deg, var(--primary-fill), var(--primary-2));
+  box-shadow: 0 14px 28px -12px var(--primary), inset 0 1px 0 rgba(255, 255, 255, .4);
+  transform: translateY(-2px);
+}
+.home-dock-button:active { transform: scale(.94); }
+
+.dashboard-goals { min-width: 0; }
+.goal-rail { position: relative; min-width: 0; }
+
+/* 目标轨道在整屏面板里撑满高度，卡片内部自己滚动 */
+.home-slide .goal-rail { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; }
+.home-slide .goal-board { flex: 1 1 auto; min-height: 0; padding-block: 8px 26px; margin-block: 0; }
+.home-slide .goal-slide { height: 100%; }
+.home-slide .rail-scrollbar { bottom: 6px; }
+.home-slide .goal-empty { flex: 1 1 auto; min-height: 0; }
+
+/* 财务卡片：上面原有三块统计，下面接本月收支 */
+.finance-ledger { margin-top: 16px; }
+.finance-ledger-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding-top: 14px; margin-bottom: 2px;
+  border-top: 1px solid var(--line);
+}
+.finance-ledger-head h3 { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12px; font-weight: 650; letter-spacing: .04em; }
+.finance-ledger-head .text-link { min-height: 30px; font-size: 12px; }
+.finance-ledger-more { padding: 12px 0 2px; color: var(--faint); font-size: 11.5px; }
+/* 卡片窄，收支行里的金额和备注都要先保住，按钮收紧一点 */
+.finance-ledger .transaction-row { gap: 10px; }
+.finance-ledger .transaction-row .icon-button { width: 32px; min-height: 34px; }
+.finance-ledger .transaction-name strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.finance-ledger .transaction-row b { white-space: nowrap; }
+.finance-ledger .ledger-note { padding: 20px 0; }
 .rail-arrow {
   position: absolute; top: 50%; z-index: 2; display: none; place-items: center;
   width: 38px; min-height: 38px; border-radius: 50%;
@@ -700,6 +762,8 @@ dialog footer { display: flex; justify-content: flex-end; gap: 9px; padding: 15p
   font-size: 13px; text-align: center;
   animation: toast-in .45s var(--ease) both;
 }
+/* 工作台底部常驻三个图标，提示条整体上抬，别压住按钮 */
+body:has(.home-dock) .toast { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
 
 /* --------------------------------------------------------------------------
    AI 页面
@@ -847,16 +911,16 @@ dialog footer { display: flex; justify-content: flex-end; gap: 9px; padding: 15p
    -------------------------------------------------------------------------- */
 
 @container (min-width: 1080px) {
-  .dashboard-grid { grid-template-columns: repeat(12, minmax(0, 1fr)); align-items: stretch; }
-  .finance-card { grid-column: 1 / span 5; }
-  .notes-card { grid-column: 6 / -1; }
-  .finance-body { grid-template-columns: minmax(0, 1fr); gap: 14px; }
-  .note-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .note-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .stat { padding: 15px 12px; }
 }
 
+/* 面板够宽时财务上半部分恢复左右两栏，窄屏仍然一列到底 */
+@container (min-width: 761px) {
+  .home-slide .finance-body { grid-template-columns: 1.35fr 1fr; gap: 16px; align-items: start; }
+}
+
 @container (max-width: 760px) {
-  .dashboard-grid { grid-template-columns: 1fr; }
   .finance-body { grid-template-columns: 1fr; gap: 14px; }
   .stat strong { font-size: clamp(15px, 3cqi, 21px); }
 }
@@ -876,14 +940,14 @@ dialog footer { display: flex; justify-content: flex-end; gap: 9px; padding: 15p
   .rail-arrow { display: grid; }
   .rail-scrollbar { display: flex; }
   .goal-slide { flex: 0 0 calc((100% - var(--gap) * 2 - var(--peek)) / 2); }
-  /* 桌面端目标轨道与下方卡片拉开距离，给滚动条留出呼吸空间 */
-  .dashboard-grid > .goal-rail, .dashboard-grid > .dashboard-goals { margin-bottom: 16px; }
 }
 @media (max-width: 760px) {
   .shell { --top-gap: 56px; --gutter: 15px; --stack-gap: 12px; }
   .float-actions .icon-button { width: 42px; min-height: 42px; }
   #main { padding-bottom: 40px; }
-  .dashboard-grid { gap: var(--stack-gap); }
+  /* 手机端整屏面板不让页面自己滚，底部图标再往下压一点 */
+  .home-page { padding-bottom: calc(74px + env(safe-area-inset-bottom, 0px)); }
+  .home-slide .goal-board { padding-block: 4px 18px; }
   .goal-board {
     margin-inline: calc(var(--gutter) * -1);
     padding-inline: var(--gutter);

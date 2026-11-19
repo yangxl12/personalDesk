@@ -231,6 +231,8 @@ export const english: Record<string, string> = {
   "更新存款": "Update savings",
   "月份": "Month",
   "查看全部": "View all",
+  "工作台面板": "Dashboard panels",
+  "还有更多记录，点上方查看全部。": "More entries — tap View all above.",
   "标题（选填）": "Title (optional)",
   "正在保存…": "Saving…",
   "登录": "Sign in",
