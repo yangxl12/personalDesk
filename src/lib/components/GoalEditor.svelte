@@ -66,13 +66,26 @@
     }
   }
 
+  function taskFields() {
+    return list?.querySelectorAll<HTMLInputElement>('input.goal-task-input')
+  }
+
   async function addRow() {
+    // 移动端只在用户手势的同步栈里认 focus（才会拉起输入法）。所以先在同一个栈里把焦点落到一个
+    // 已存在的输入框上，等新行渲染出来再把焦点搬过去——此时键盘已经开着，换焦点不会被拦。
+    // 这一步用 preventScroll，免得焦点先跳到名称框把弹窗滚到顶部。
+    const active = document.activeElement
+    const typing = active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement
+    if (!typing) {
+      const fields = taskFields()
+      ;(fields?.[fields.length - 1] ?? input)?.focus({ preventScroll: true })
+    }
     rows = [...rows, {
       key: randomId(), id: null, title: '', done: false, version: 0, savedTitle: '', savedDone: false
     }]
     notice = ''
     await tick()
-    const fields = list?.querySelectorAll<HTMLInputElement>('input.goal-task-input')
+    const fields = taskFields()
     fields?.[fields.length - 1]?.focus()
     if (list) list.scrollTop = list.scrollHeight
   }
