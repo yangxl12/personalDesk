@@ -1,6 +1,7 @@
 import { db, openDb, type GoalRow, type ItemRow, type NoteRow, type TaskRow, type TransactionRow } from '../db'
 import { randomId } from '#lib/random-id'
 import { write } from '../tx'
+import { markDeleted } from './tombstone'
 import {
   inputs, month, today, type Dashboard, type DashboardGoal, type Finance, type Goal, type GoalPlan, type GoalTask, type List,
   type Note, type NoteSummary, type Preferences, type Revisions, type Savings, type TaskBrief, type Totals, type Progress
@@ -342,7 +343,13 @@ async function execute(operation: Operation, ref: string | null, input: unknown,
       const goal = await db.goals.get(ref ?? '')
       if (!goal) throw notFound()
       const items = await db.items.where('goal_id').equals(goal.id).toArray()
-      if (items.length) await db.tasks.where('item_id').anyOf(items.map(item => item.id)).delete()
+      const itemIds = items.map(item => item.id)
+      const tasks = itemIds.length ? await db.tasks.where('item_id').anyOf(itemIds).toArray() : []
+      // 级联删掉的子孙同样要留墓碑，否则对端下次同步会把整棵子树带回来。
+      await markDeleted('tasks', tasks.map(row => row.id), now)
+      await markDeleted('items', itemIds, now)
+      await markDeleted('goals', [goal.id], now)
+      if (itemIds.length) await db.tasks.where('item_id').anyOf(itemIds).delete()
       await db.items.where('goal_id').equals(goal.id).delete()
       await db.goals.delete(goal.id)
       return { id: goal.id }
@@ -377,6 +384,7 @@ async function execute(operation: Operation, ref: string | null, input: unknown,
     case 'taskDelete': {
       const task = await db.tasks.get(ref ?? '')
       if (!task) throw notFound()
+      await markDeleted('tasks', [task.id], now)
       await db.tasks.delete(task.id)
       await ancestors(task.item_id, now, -1, -task.done)
       return { id: task.id }
@@ -405,6 +413,7 @@ async function execute(operation: Operation, ref: string | null, input: unknown,
     case 'noteDelete': {
       const row = await db.notes.get(ref ?? '')
       if (!row) throw notFound()
+      await markDeleted('notes', [row.id], now)
       await db.notes.delete(row.id)
       return { id: row.id }
     }
@@ -432,6 +441,7 @@ async function execute(operation: Operation, ref: string | null, input: unknown,
     case 'transactionDelete': {
       const row = await db.transactions.get(ref ?? '')
       if (!row) throw notFound()
+      await markDeleted('transactions', [row.id], now)
       await db.transactions.delete(row.id)
       return { id: row.id }
     }

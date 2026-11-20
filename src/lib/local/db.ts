@@ -108,6 +108,15 @@ export type ProposalRow = {
 
 export type MetaRow = { key: string; value: number | string }
 
+// 删除墓碑只服务跨端同步：本地表照旧硬删，墓碑单独记一笔，合并时用它把对端的行也删掉。
+// 不改业务表加 isDeleted 是有意的——软删除要动每一处 where，风险远大于收益。
+export type TombstoneRow = {
+  key: string
+  table: string
+  record_id: string
+  deleted_at: number
+}
+
 export const defaultPreferences: Preferences = {
   theme: 'system',
   language: 'zh-CN',
@@ -134,6 +143,7 @@ class BuxuDatabase extends Dexie {
   messages!: Table<MessageRow, string>
   proposals!: Table<ProposalRow, string>
   meta!: Table<MetaRow, string>
+  tombstones!: Table<TombstoneRow, string>
 
   constructor() {
     super('buxu')
@@ -173,6 +183,10 @@ class BuxuDatabase extends Dexie {
     this.version(3).stores({
       messages: 'id, conversation_id, &[conversation_id+seq], created_at, run_id',
       proposals: 'id, run_id, status, conversation_id'
+    })
+    // v4 只新增墓碑表，不动任何既有表结构，升级时零迁移。
+    this.version(4).stores({
+      tombstones: 'key, table, deleted_at'
     })
   }
 }

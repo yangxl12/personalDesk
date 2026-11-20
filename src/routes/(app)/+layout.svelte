@@ -3,7 +3,9 @@
   import { resolve } from '$app/paths'
   import { page } from '$app/state'
   import { provideUi } from '#lib/ui.svelte'
+  import { refreshModules } from '#lib/client'
   import { pwa, syncThemeColor } from '#lib/pwa.svelte'
+  import { sync } from '#lib/sync/sync.svelte'
   import { updater } from '#lib/update.svelte'
   import Icon from '#lib/components/Icon.svelte'
   import Editor from '#lib/components/Editor.svelte'
@@ -25,9 +27,20 @@
   onMount(() => {
     pwa.init()
     updater.init()
+    void sync.init()
     window.addEventListener('buxu:revisions', localUpdate)
-    return () => window.removeEventListener('buxu:revisions', localUpdate)
+    window.addEventListener('buxu:sync-applied', synced)
+    return () => {
+      window.removeEventListener('buxu:revisions', localUpdate)
+      window.removeEventListener('buxu:sync-applied', synced)
+    }
   })
+
+  // 同步把远端数据写进本地后，各页面的 load 需要重新跑一遍才会显示新内容。
+  function synced(event: Event) {
+    const updated = (event as CustomEvent<Record<string, number>>).detail
+    void refreshModules(updated)
+  }
 
   // 本地写入完成后 commit() 会广播模块修订号，AI 页面据此重载消息。
   function localUpdate(event: Event) {

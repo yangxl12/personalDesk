@@ -5,6 +5,6 @@ import { db } from './db'
 export function write<T>(work: () => Promise<T>): Promise<T> {
   return db.transaction('rw', [
     db.goals, db.items, db.tasks, db.notes, db.transactions, db.savings,
-    db.preferences, db.models, db.chats, db.messages, db.proposals, db.meta
+    db.preferences, db.models, db.chats, db.messages, db.proposals, db.meta, db.tombstones
   ], work)
 }

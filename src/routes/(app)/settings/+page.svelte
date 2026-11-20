@@ -6,6 +6,7 @@
   import { commit, refreshModules, RequestError } from '#lib/client'
   import type { Preferences } from '#lib/contracts/workspace'
   import DataSettings from '#lib/components/DataSettings.svelte'
+  import SyncSettings from '#lib/components/SyncSettings.svelte'
   import PwaSettings from '#lib/components/PwaSettings.svelte'
   import UpdateSettings from '#lib/components/UpdateSettings.svelte'
   import ModelSettings from '#lib/components/ModelSettings.svelte'
@@ -76,6 +77,7 @@
     </div>
   </section>
   <UpdateSettings />
+  <SyncSettings />
   <PwaSettings />
   <DataSettings />
 </div>
