@@ -166,6 +166,8 @@ export const english: Record<string, string> = {
   "已配置模型": "Configured models",
   "暂无已配置的模型": "No models configured",
   "当前模型": "Active model",
+  "切换模型": "Switch model",
+  "对话历史": "Chat history",
   "设为当前": "Set as active",
   "部署配置": "Deployment",
   "已切换当前模型": "Active model changed",

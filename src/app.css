@@ -937,37 +937,43 @@ body:has(.home-dock) .toast { bottom: calc(76px + env(safe-area-inset-bottom, 0p
 .ai-unconfigured-inner strong { font-size: 16px; font-weight: 650; }
 .ai-unconfigured-inner p { color: var(--muted); font-size: 13px; line-height: 1.7; }
 
-/* 顶栏：一个模型胶囊 + 两个无边框按钮，不画分隔线 */
-.ai-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 2px 2px 12px; }
-.ai-model {
-  position: relative; display: inline-flex; align-items: center; gap: 9px; min-width: 0; height: 34px;
-  padding: 0 13px 0 11px; border-radius: 999px;
-  background: var(--glass-2); border: 1px solid var(--line);
-  box-shadow: inset 0 1px 0 var(--glass-edge);
+/* AI 顶栏：左边返回，右边一列纯图标操作（模型 / 历史 / 新建 / 设置），不带按钮底色 */
+.ai-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-inline: 2px; margin-bottom: 4px; }
+.bar-actions { display: flex; flex: none; align-items: center; gap: 2px; }
+.bar-action {
+  display: inline-grid; place-items: center; width: 38px; height: 38px; padding: 0;
+  border: 0; border-radius: 0; background: none; color: var(--muted);
+  transition: color .25s, transform .3s var(--ease), opacity .25s;
 }
-.ai-model-dot {
-  flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--positive);
-  box-shadow: 0 0 0 3px var(--positive-soft);
+.bar-action:hover:not(:disabled) { color: var(--ink); transform: translateY(-1px); }
+.bar-action:active:not(:disabled) { transform: scale(.94); }
+.bar-action.active { color: var(--primary); }
+.bar-action:disabled { opacity: .4; cursor: default; }
+a.bar-action { color: var(--muted); }
+
+/* 模型浮层：点击模型图标在下方展开，选完即收 */
+.bar-pop { position: relative; display: inline-flex; }
+.bar-menu {
+  position: absolute; top: calc(100% + 8px); right: 0; z-index: 8;
+  min-width: 216px; max-width: min(286px, 78vw); padding: 6px; display: grid; gap: 2px;
+  background: var(--dialog-bg); border: 1px solid var(--line-strong); border-radius: 18px;
+  box-shadow: 0 26px 60px -26px rgba(30, 20, 70, .5), inset 0 1px 0 var(--glass-edge);
+  animation: menu-in .22s var(--ease) both;
 }
-.ai-model:has(.chat-model)::after {
-  content: ''; position: absolute; right: 12px; top: 50%; width: 5px; height: 5px; pointer-events: none;
-  border-right: 1.5px solid var(--faint); border-bottom: 1.5px solid var(--faint);
-  transform: translateY(-70%) rotate(45deg);
+.bar-menu-item {
+  display: flex; align-items: center; gap: 8px; width: 100%; min-height: 42px; padding: 8px 10px;
+  border: 0; border-radius: 12px; background: none; color: var(--ink); text-align: left; font-size: 13px;
+  transition: background-color .2s, color .2s;
 }
-.ai-model-name { color: var(--ink-soft); font-size: 12px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.chat-model {
-  max-width: 100%; min-height: 20px; padding: 0 14px 0 0; border: 0; background: transparent;
-  color: var(--ink-soft); font-size: 12px; font-weight: 600; text-overflow: ellipsis; cursor: pointer;
-  appearance: none; -webkit-appearance: none;
-}
-.chat-model:disabled { cursor: default; }
-.ai-tools { display: flex; flex: none; gap: 2px; }
-.ai-tools .button {
-  min-height: 34px; padding: 0 11px; gap: 5px; font-size: 12px; border-radius: 999px;
-  border-color: transparent; background: transparent; color: var(--muted); box-shadow: none;
-}
-.ai-tools .button:hover { color: var(--primary); background: var(--primary-soft); }
-.ai-tools .button.active { color: var(--primary); background: var(--primary-soft); }
+.bar-menu-item > span { flex: 1; min-width: 0; display: grid; gap: 3px; }
+.bar-menu-item strong { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bar-menu-item small { color: var(--faint); font-size: 11px; }
+.bar-menu-item > svg { flex: none; color: var(--primary); }
+.bar-menu-item:hover { background: var(--primary-soft); }
+.bar-menu-item[aria-checked="true"] { color: var(--primary); }
+.bar-menu-item[aria-checked="true"] strong { color: var(--primary); }
+@keyframes menu-in { from { opacity: 0; transform: translateY(-6px) scale(.97); } }
+
 .ai-body { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
 
 /* 会话标题：两侧渐隐短线，中间小字，不压一条硬线 */
@@ -1336,10 +1342,9 @@ body:has(.home-dock) .toast { bottom: calc(76px + env(safe-area-inset-bottom, 0p
   .button { min-height: 43px; }
   .icon-button { width: 40px; min-height: 43px; }
   #main:has(.ai-page) { padding-bottom: 8px; }
-  .ai-toolbar { padding: 2px 0 10px; }
-  /* 手机端工具栏按钮要留着能被拇指点中 */
-  .ai-tools .button { min-height: 38px; padding: 0 12px; }
-  .ai-model { padding: 7px 12px 7px 11px; }
+  /* 手机端顶栏图标留足拇指点击面积 */
+  .bar-action { width: 42px; height: 42px; }
+  .bar-menu { min-width: 200px; }
   .prompt-chips { margin-top: 18px; }
   .welcome-copy strong { font-size: 17.5px; }
   .composer { padding-inline: 0; }

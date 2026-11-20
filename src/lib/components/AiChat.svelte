@@ -2,6 +2,7 @@
   import { randomId } from '#lib/random-id'
   import { tick, untrack } from 'svelte'
   import { invalidate } from '$app/navigation'
+  import { resolve } from '$app/paths'
   import { page } from '$app/state'
   import { useUi } from '#lib/ui.svelte'
   import { commit, refreshModel, refreshModules, request, RequestError } from '#lib/client'
@@ -17,6 +18,8 @@
   import ProposalCard from './ProposalCard.svelte'
 
   const ui = useUi()
+  // 顶栏由会话组件自己画：返回按钮的跳转逻辑仍留在路由页面里。
+  let { onback }: { onback: () => void } = $props()
   let messages = $state<Message[]>([])
   let header = $state<Chat | null>(null)
   let draft = $state('')
@@ -42,6 +45,25 @@
   let chats = $state<Chat[]>([])
   let nextCursor = $state<string | null>(null)
   let loadingChats = $state(false)
+  let modelOpen = $state(false)
+  let modelMenu = $state<HTMLDivElement>()
+  let activeModel = $derived(ui.chatModel.models.find(profile => profile.ref === ui.chatModel.activeRef))
+  let modelTitle = $derived(ui.t('切换模型') + (activeModel ? ' · ' + (activeModel.label || activeModel.id) : ''))
+
+  // 模型菜单是浮层，点到外面或按 Esc 就收起来。
+  $effect(() => {
+    if (!modelOpen) return
+    const away = (event: Event) => {
+      if (event instanceof KeyboardEvent) { if (event.key === 'Escape') modelOpen = false; return }
+      if (!modelMenu?.contains(event.target as Node)) modelOpen = false
+    }
+    window.addEventListener('pointerdown', away)
+    window.addEventListener('keydown', away)
+    return () => {
+      window.removeEventListener('pointerdown', away)
+      window.removeEventListener('keydown', away)
+    }
+  })
 
   $effect(() => {
     const id = ui.chatId
@@ -202,8 +224,7 @@
     }
   }
 
-  async function switchModel(select: HTMLSelectElement) {
-    const ref = select.value
+  async function switchModel(ref: string) {
     if (switchingModel || pending || generating || ref === ui.chatModel.activeRef) return
     switchingModel = true
     error = ''
@@ -217,7 +238,6 @@
       if (failure instanceof RequestError && failure.code === 'VERSION_CONFLICT') await invalidate('buxu:model')
     } finally {
       switchingModel = false
-      select.value = ui.chatModel.activeRef ?? ''
     }
   }
 
@@ -293,26 +313,38 @@
 </script>
 
 <div class="ai-page">
-  <div class="ai-toolbar">
-    <div class="ai-model">
-      <span class="ai-model-dot" aria-hidden="true"></span>
-      {#if ui.chatModel.models.length > 1}
-        <select class="chat-model" aria-label={ui.t('当前模型')} value={ui.chatModel.activeRef ?? ''} disabled={pending || switchingModel || generating}
-          onchange={event => switchModel(event.currentTarget)}>
-          {#each ui.chatModel.models as profile (profile.ref)}
-            <option value={profile.ref}>{profile.label || profile.id} · {profile.provider === 'deepseek' ? 'DeepSeek' : ui.t('自定义兼容接口')}</option>
-          {/each}
-        </select>
-      {:else}
-        <small class="ai-model-name">{ui.chatModel.models[0]?.label || ui.chatModel.models[0]?.id}</small>
-      {/if}
+  <header class="page-bar ai-bar">
+    <button class="button icon-button" type="button" aria-label={ui.t('返回')} title={ui.t('返回')} onclick={onback}>
+      <Icon name="chevronLeft" size={20} />
+    </button>
+    <div class="bar-actions">
+      <div class="bar-pop" bind:this={modelMenu}>
+        <button class="bar-action" type="button" aria-haspopup="menu" aria-expanded={modelOpen}
+          aria-label={ui.t('切换模型')} title={modelTitle} disabled={pending || switchingModel || generating}
+          onclick={() => { modelOpen = !modelOpen }}>
+          <Icon name="spark" size={19} />
+        </button>
+        {#if modelOpen}
+          <div class="bar-menu" role="menu" aria-label={ui.t('切换模型')}>
+            {#each ui.chatModel.models as profile (profile.ref)}
+              <button class="bar-menu-item" type="button" role="menuitemradio" aria-checked={profile.ref === ui.chatModel.activeRef}
+                onclick={() => { modelOpen = false; void switchModel(profile.ref) }}>
+                <span>
+                  <strong>{profile.label || profile.id}</strong>
+                  <small>{profile.provider === 'deepseek' ? 'DeepSeek' : ui.t('自定义兼容接口')}</small>
+                </span>
+                {#if profile.ref === ui.chatModel.activeRef}<Icon name="check" size={15} />{/if}
+              </button>
+            {/each}
+          </div>
+        {/if}
+      </div>
+      <button class="bar-action" class:active={view === 'history'} type="button" aria-pressed={view === 'history'}
+        aria-label={ui.t('对话历史')} title={ui.t('对话历史')} onclick={toggleHistory}><Icon name="chats" size={19} /></button>
+      <button class="bar-action" type="button" aria-label={ui.t('新建会话')} title={ui.t('新建会话')} onclick={newChat}><Icon name="plus" size={19} /></button>
+      <a class="bar-action" href={resolve('settings')} aria-label={ui.t('设置')} title={ui.t('设置')}><Icon name="settings" size={19} /></a>
     </div>
-    <div class="ai-tools">
-      <button class="button secondary" class:active={view === 'history'} type="button" aria-pressed={view === 'history'}
-        title={ui.t('AI 对话历史')} onclick={toggleHistory}><Icon name="chats" size={16} />{ui.t('历史')}</button>
-      <button class="button secondary" type="button" title={ui.t('新建会话')} onclick={newChat}><Icon name="plus" size={16} />{ui.t('新建')}</button>
-    </div>
-  </div>
+  </header>
   <div class="ai-body">
     {#if view === 'history'}
       <div class="chat-history">

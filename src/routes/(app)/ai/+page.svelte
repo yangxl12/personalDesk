@@ -16,15 +16,18 @@
   }
 </script>
 
-<header class="page-bar">
-  <button class="button icon-button" type="button" aria-label={ui.t('返回')} title={ui.t('返回')} onclick={back}>
-    <Icon name="chevronLeft" size={20} />
-  </button>
-  <h1>{ui.t('AI 助手')}</h1>
-</header>
+<!-- AI 会话页自己画顶栏（返回 + 右侧纯图标操作），没配模型时这里只留返回和设置。 -->
 {#if configured}
-  <AiChat />
+  <AiChat onback={back} />
 {:else}
+  <header class="page-bar ai-bar">
+    <button class="button icon-button" type="button" aria-label={ui.t('返回')} title={ui.t('返回')} onclick={back}>
+      <Icon name="chevronLeft" size={20} />
+    </button>
+    <div class="bar-actions">
+      <a class="bar-action" href={resolve('settings')} aria-label={ui.t('设置')} title={ui.t('设置')}><Icon name="settings" size={19} /></a>
+    </div>
+  </header>
   <div class="ai-page ai-unconfigured">
     <div class="ai-unconfigured-inner">
       <span class="welcome-mark"><Icon name="spark" size={24} /></span>
