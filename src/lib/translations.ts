@@ -218,6 +218,8 @@ export const english: Record<string, string> = {
   "删除「{title}」及其 {tasks} 个任务？": "Delete “{title}” and its {tasks} tasks?",
   "删除「{title}」？": "Delete “{title}”?",
   "删除思考": "Delete note",
+  "展开全部": "Show all",
+  "收起": "Collapse",
   "删除这条思考记录？": "Delete this note?",
   "删除所选任务": "Delete selected tasks",
   "删除选中的 {count} 个任务？": "Delete the {count} selected tasks?",

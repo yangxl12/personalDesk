@@ -7,15 +7,27 @@
   let { note }: { note: Note } = $props()
   const ui = useUi()
 
+  // 列表里正文只露 15 行，超出的折起来，底部箭头手动展开/收起。
+  const VISIBLE_LINES = 15
+
   let body: HTMLDivElement | undefined = $state()
-  // 正文超出卡片高度时补一层渐隐，让「还有下文」看得出来。
+  let expanded = $state(false)
   let clipped = $state(false)
+  // 折起高度和全文高度都由行高算出来，CSS 只管读变量。
+  let cap = $state(0)
+  let full = $state(0)
 
   $effect(() => {
     const root = body
-    const inner = root?.firstElementChild
+    const inner = root?.firstElementChild as HTMLElement | null
     if (!root || !inner) return
-    const check = () => { clipped = root.scrollHeight - root.clientHeight > 2 }
+    // .md 在裁切容器里仍然按全文排版，展开与否都能量到完整高度。
+    const check = () => {
+      const line = parseFloat(getComputedStyle(inner).lineHeight) || 21.5
+      cap = Math.round(line * VISIBLE_LINES)
+      full = inner.offsetHeight
+      clipped = full - cap > 2
+    }
     const observer = new ResizeObserver(check)
     observer.observe(inner)
     check()
@@ -31,7 +43,15 @@
   </div>
   <span class="note-meta"><Icon name="notes" size={15} /><time datetime={new Date(note.updated_at).toISOString()}>{ui.date(note.updated_at)}</time></span>
   {#if note.title}<strong>{note.title}</strong>{/if}
-  <div class="note-body" class:clipped bind:this={body}>
+  <div class="note-body" class:clipped={clipped && !expanded} class:expanded bind:this={body}
+    style:--note-cap={cap ? cap + 'px' : undefined}
+    style:--note-full={full ? full + 'px' : undefined}>
     <Markdown text={note.body} />
   </div>
+  {#if clipped}
+    <button type="button" class="note-toggle" aria-expanded={expanded} title={ui.t(expanded ? '收起' : '展开全部')}
+      aria-label={ui.t(expanded ? '收起' : '展开全部')} onclick={() => { expanded = !expanded }}>
+      <Icon name="down" size={15} />
+    </button>
+  {/if}
 </article>
