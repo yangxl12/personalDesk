@@ -531,6 +531,15 @@ h2 { font-size: 16px; font-weight: 650; letter-spacing: -.012em; }
 .goal-slide:nth-child(3n + 1) { --slide-glow: var(--glow-1); }
 .goal-slide:nth-child(3n + 2) { --slide-glow: var(--glow-2); }
 .goal-slide:nth-child(3n + 3) { --slide-glow: var(--glow-3); }
+/* 目标卡的反光层钉死：不跟指针跑，也不在 hover 时变亮。
+   勾选任务必然要把鼠标/手指移进卡片，原来那一进整块背景就亮一下，看着像勾选引起的变化。
+   光斑固定在卡片顶部中间，静止状态和原来没有指针移动时完全一致。 */
+.goal-slide::before {
+  background:
+    radial-gradient(340px circle at 50% 0%, var(--sheen), transparent 62%),
+    linear-gradient(138deg, var(--sheen), transparent 36%, transparent 68%, var(--sheen));
+}
+.goal-slide:hover::before { opacity: .55; }
 .goal-slide:hover { border-color: var(--primary-tint); box-shadow: var(--shadow-lift); }
 .goal-card-head { display: flex; align-items: flex-start; gap: 4px; margin-bottom: 12px; }
 .goal-card-head .goal-board-title { flex: 1; min-width: 0; margin: 0; }
