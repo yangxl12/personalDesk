@@ -56,6 +56,6 @@
   {#key ui.editor}<Editor spec={ui.editor} />{/key}
 {/if}
 {#if ui.composer}
-  <NoteComposer />
+  {#key ui.composer}<NoteComposer draft={ui.composer} />{/key}
 {/if}
 {#if ui.notice}<div class="toast" role="status">{ui.t(ui.notice)}</div>{/if}

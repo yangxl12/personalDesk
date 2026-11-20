@@ -18,6 +18,8 @@ export type EditorSpec = {
   after?: (data: Record<string, string>) => string
   refreshLocal?: (data: Record<string, string>) => Promise<void> | void
 }
+// 思考的读写只在正文上：新建传空对象，编辑传已有内容。
+export type NoteDraft = { id?: string; title?: string; body?: string; version?: number }
 
 export class WorkspaceUi {
   preferences: Preferences
@@ -26,8 +28,8 @@ export class WorkspaceUi {
   chatModel: ModelStatus
   attachment = $state<Attachment | null>(null)
   editor = $state<EditorSpec | null>(null)
-  // 新建思考用独立的一层：只有一个正文框，边写边存，塞不进通用的表单弹窗。
-  composer = $state(false)
+  // 思考的弹窗只有正文一个框，边写边存，塞不进通用的表单弹窗，单独一层。
+  composer = $state<NoteDraft | null>(null)
   remoteChange = $state(false)
   notice = $state('')
   #timer: ReturnType<typeof setTimeout> | undefined
@@ -87,12 +89,12 @@ export class WorkspaceUi {
     this.remoteChange = false
   }
 
-  compose() {
-    this.composer = true
+  compose(draft: NoteDraft = {}) {
+    this.composer = draft
   }
 
   endCompose() {
-    this.composer = false
+    this.composer = null
   }
 
   async save(spec: EditorSpec, body: object, key: string) {

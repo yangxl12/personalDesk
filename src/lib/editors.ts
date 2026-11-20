@@ -14,16 +14,7 @@ export function createTask(ui: WorkspaceUi, goalId: string) {
 export async function editNote(ui: WorkspaceUi, note: NoteSummary) {
   try {
     const { data } = await request<Note>('/notes/' + note.id)
-    ui.open({
-      title: '编辑思考',
-      path: '/notes/' + note.id,
-      method: 'PATCH',
-      values: { version: data.version },
-      fields: [
-        { name: 'title', label: '标题（选填）', value: data.title },
-        { name: 'body', label: '正文', type: 'textarea', value: data.body, required: true }
-      ]
-    })
+    ui.compose({ id: data.id, title: data.title, body: data.body, version: data.version })
   } catch (failure) {
     ui.notify(ui.error(failure))
   }
