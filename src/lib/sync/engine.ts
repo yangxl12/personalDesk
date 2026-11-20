@@ -240,6 +240,28 @@ async function persist(data: SyncData, tombstones: TombstoneRow[], rev: number, 
   })
 }
 
+// 定时拉取时绝大多数情况两边完全一致，那就什么都不写。
+// 判定用 id + version（墓碑用 key + deleted_at），比逐字段深比较便宜，也够用：
+// 同一个 version 的内容不会不同，不同 version 必定不同。
+function sameAsLocal(data: SyncData, tombstones: TombstoneRow[], local: SyncData & { tombstones: TombstoneRow[] }) {
+  const rows = (left: { id: string; version: number }[], right: { id: string; version: number }[]) => {
+    if (left.length !== right.length) return false
+    const index = new Map(right.map(row => [row.id, row.version]))
+    return left.every(row => index.get(row.id) === row.version)
+  }
+  const graves = (left: TombstoneRow[], right: TombstoneRow[]) => {
+    if (left.length !== right.length) return false
+    const index = new Map(right.map(row => [row.key, row.deleted_at]))
+    return left.every(row => index.get(row.key) === row.deleted_at)
+  }
+  return rows(data.goals, local.goals) && rows(data.items, local.items)
+    && rows(data.tasks, local.tasks) && rows(data.notes, local.notes)
+    && rows(data.transactions, local.transactions)
+    && graves(tombstones, local.tombstones)
+    && (data.savings?.version ?? 0) === (local.savings?.version ?? 0)
+    && (data.preferences?.version ?? 0) === (local.preferences?.version ?? 0)
+}
+
 async function refresh() {
   const revisions: Record<string, number> = {}
   for (const module of MODULES) revisions[module] = await bump(module)
@@ -256,14 +278,23 @@ async function execute(): Promise<SyncReport> {
   await openDb()
 
   let last: SyncError | null = null
+  let dirty = false
   try {
     for (let attempt = 0; attempt < 3; attempt++) {
       const remote = await pull(config)
       const local = await snapshot()
       const plan = mergePayloads(remote.payload, local)
       const at = Date.now()
-      const rev = (remote.payload?.rev ?? 0) + (plan.adopted > 0 ? 1 : 0)
 
+      // 定时拉取大多撞在这个分支：两边一样，只更新「上次同步时间」，不写库也不刷新界面。
+      // conflicts 不为 0 说明有同 version 不同时间戳的碰撞，哪怕本地没赢也可能要吸收远端那份。
+      if (plan.adopted === 0 && plan.conflicts === 0 && sameAsLocal(plan.data, plan.tombstones, local)) {
+        await db.meta.put({ key: AT_KEY, value: at })
+        return { rev: remote.payload?.rev ?? 0, pushed: false, conflicts: 0, at }
+      }
+
+      const rev = (remote.payload?.rev ?? 0) + (plan.adopted > 0 ? 1 : 0)
+      dirty = true
       await persist(plan.data, plan.tombstones, rev, plan.conflicts, at)
 
       if (plan.adopted === 0) {
@@ -287,7 +318,7 @@ async function execute(): Promise<SyncReport> {
     }
     throw last ?? new SyncError('CONFLICT', '另一端持续在写，稍后再试')
   } finally {
-    await refresh()
+    if (dirty) await refresh()
   }
 }
 
