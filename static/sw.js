@@ -41,7 +41,8 @@ self.addEventListener('fetch', event => {
 
   const url = new URL(request.url)
   if (url.origin !== self.location.origin) return
-  if (url.pathname.endsWith('/sw.js')) return
+  // sw.js 不缓存；version.json 是检查更新要的那份探头文件，缓存住就等于永远查不到新版本。
+  if (url.pathname.endsWith('/sw.js') || url.pathname.endsWith('/version.json')) return
 
   // 导航和 SvelteKit 的 hover 预取都会取 HTML，一并走网络优先。
   const wantsHtml = request.mode === 'navigate' || (request.headers.get('accept') || '').includes('text/html')

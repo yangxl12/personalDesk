@@ -41,6 +41,7 @@ npm run preview:static
 - **只在构建产物里注册 Service Worker**：`vite dev` 下不注册，免得和 HMR 抢请求。验证离线要跑 `npm run build && npm run preview:static`。
 - **更新不清空旧缓存**：新 SW 装好即接管，但保留旧版本缓存——还开着的旧页面仍引用上一版 hash 资源，清掉就是白屏。
 - **状态栏配色**：`theme-color` 跟着 `--base` 走，切主题时由 `src/lib/pwa.svelte.ts` 同步，安卓状态栏不会和应用背景撞色。
+- **更新代码**：「设置 → 代码更新」显示当前构建的提交号，点「检查更新」跟线上的 `version.json` 比对；有新版本时一键注销旧 Service Worker、清掉 `buxu-*` 缓存并带 `?v=` 强制刷新，不用手动清缓存或重装。`version.json` 由 `vite.config.ts` 在构建时写入 `build/`。
 
 ## 部署到 GitHub Pages
 

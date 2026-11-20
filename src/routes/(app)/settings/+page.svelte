@@ -7,29 +7,18 @@
   import type { Preferences } from '#lib/contracts/workspace'
   import DataSettings from '#lib/components/DataSettings.svelte'
   import PwaSettings from '#lib/components/PwaSettings.svelte'
+  import UpdateSettings from '#lib/components/UpdateSettings.svelte'
   import ModelSettings from '#lib/components/ModelSettings.svelte'
   import Icon from '#lib/components/Icon.svelte'
 
   let { data } = $props()
   const ui = useUi()
-  let busy = $state(false)
-  let dirty = $state(false)
-  let failure = $state('')
-  let baseVersion = $state(0)
   type Appearance = Pick<Preferences, 'theme' | 'language'>
   const themes = [['system', 'monitor', '跟随系统'], ['light', 'sun', '明亮'], ['dark', 'moon', '暗黑']] as const
   let pendingAppearance = $state<Appearance | null>(null)
   let appearanceFailure = $state('')
-  let timezone = $state('')
   // AI 数据访问开关已取消，一律放开；写回时固定带上，旧数据里的 0 也能被覆盖掉。
   const access = { ai_goals: 1, ai_notes: 1, ai_finance: 1 } as const
-  let current = $state<Preferences | null>(null)
-  let attempt: { fingerprint: string; key: string } | undefined
-
-  $effect(() => {
-    if (dirty) return
-    timezone = ui.preferences.timezone
-  })
 
   function back() {
     // 从别处进来就退回去；直接打开设置页（PWA / 刷新）时退回工作台。
@@ -37,58 +26,22 @@
     else void goto(resolve(''))
   }
 
-  function markDirty() {
-    if (!dirty) baseVersion = ui.preferences.version
-    dirty = true
-  }
-
-  async function persist(body: Omit<Preferences, 'ai_version'>) {
-    const fingerprint = JSON.stringify(body)
-    if (attempt?.fingerprint !== fingerprint) attempt = { fingerprint, key: randomId() }
-    const response = await commit<Preferences>('PATCH', '/preferences', body, attempt.key)
-    if (response.revisions) await refreshModules(response.revisions)
-    ui.notify('已保存')
-    return response.data
-  }
-
+  // 主题和语言改一下就存，没有提交按钮；时区沿用已有值，界面上不再暴露。
   async function saveAppearance(changes: Partial<Appearance>) {
-    if (busy || pendingAppearance) return
+    if (pendingAppearance) return
     const { theme, language, timezone, version } = ui.preferences
     pendingAppearance = { theme, language, ...changes }
     appearanceFailure = ''
     try {
-      const saved = await persist({ ...pendingAppearance, timezone, ...access, version })
-      if (dirty && baseVersion === version) baseVersion = saved.version
-      if (current) current = ui.preferences
+      const body = { ...pendingAppearance, timezone, ...access, version }
+      const response = await commit<Preferences>('PATCH', '/preferences', body, randomId())
+      if (response.revisions) await refreshModules(response.revisions)
+      ui.notify('已保存')
     } catch (error) {
       appearanceFailure = ui.error(error)
       if (error instanceof RequestError && error.code === 'VERSION_CONFLICT') await invalidate('buxu:preferences')
     } finally {
       pendingAppearance = null
-    }
-  }
-
-  async function save(event: SubmitEvent) {
-    event.preventDefault()
-    if (busy || pendingAppearance || current) return
-    const values = new FormData(event.currentTarget as HTMLFormElement)
-    const { theme, language } = ui.preferences
-    const body = { theme, language, timezone: String(values.get('timezone') ?? ''), ...access,
-      version: baseVersion || ui.preferences.version }
-    busy = true
-    failure = ''
-    try {
-      await persist(body)
-      dirty = false
-      baseVersion = 0
-    } catch (error) {
-      failure = ui.error(error)
-      if (error instanceof RequestError && error.code === 'VERSION_CONFLICT') {
-        current = (error.fields as { current: Preferences }).current
-        await invalidate('buxu:preferences')
-      }
-    } finally {
-      busy = false
     }
   }
 </script>
@@ -103,43 +56,26 @@
   <ModelSettings settings={data.modelSettings} />
   <section class="settings-block">
     <header class="section-head"><h2><span class="section-icon"><Icon name="settings" /></span>{ui.t('个人偏好')}</h2></header>
-      <form class="model-form" onsubmit={save}>
-        <fieldset class="theme-picker" disabled={busy || !!pendingAppearance}>
-          <legend>{ui.t('主题')}</legend>
-          <div class="theme-options">
-            {#each themes as [value, icon, label]}
-              <label title={ui.t(label)}><input type="radio" name="theme" {value} aria-label={ui.t(label)}
-                checked={(pendingAppearance ?? ui.preferences).theme === value}
-                onchange={() => saveAppearance({ theme: value })}><span><Icon name={icon} size={18} /></span></label>
-            {/each}
-          </div>
-        </fieldset>
-        <label class="field">{ui.t('语言')}
-          <select name="language" value={(pendingAppearance ?? ui.preferences).language} disabled={busy || !!pendingAppearance}
-            onchange={event => saveAppearance({ language: event.currentTarget.value as Preferences['language'] })}><option value="zh-CN" lang="zh-CN">简体中文</option><option value="en" lang="en">English</option></select>
-        </label>
-        {#if pendingAppearance}<p class="field-hint" role="status">{ui.t('正在保存…')}</p>{/if}
-        {#if appearanceFailure}<p class="form-error" role="alert">{appearanceFailure}</p>{/if}
-        <label class="field">{ui.t('账号时区')}
-          <input name="timezone" value={dirty ? timezone : ui.preferences.timezone} oninput={event => {
-            timezone = event.currentTarget.value
-            markDirty()
-          }} disabled={busy} required placeholder="Asia/Shanghai" list="timezones">
-        </label>
-        <datalist id="timezones"><option value="Asia/Shanghai"></option><option value="Asia/Tokyo"></option><option value="Europe/London"></option><option value="America/New_York"></option><option value="UTC"></option></datalist>
-        {#if dirty && baseVersion !== ui.preferences.version}<p class="field-hint" role="status">{ui.t('数据已在另一端更新，当前输入已保留。')}</p>{/if}
-        {#if failure}<p class="form-error" role="alert">{failure}</p>{/if}
-        {#if current}
-          <p class="field-hint">{ui.t('当前已保存的内容')} · {ui.t({ system: '跟随系统', light: '明亮', dark: '暗黑' }[current.theme])} · {current.language} · {current.timezone}</p>
-          <button class="button secondary" type="button" disabled={busy || !!pendingAppearance} onclick={() => {
-            baseVersion = current?.version ?? baseVersion
-            current = null
-            failure = ''
-          }}>{ui.t('保留草稿并采用最新版本')}</button>
-        {/if}
-        <button class="button primary" type="submit" disabled={busy || !!pendingAppearance || !!current}>{ui.t('保存')}</button>
-      </form>
+    <div class="model-form">
+      <fieldset class="theme-picker" disabled={!!pendingAppearance}>
+        <legend>{ui.t('主题')}</legend>
+        <div class="theme-options">
+          {#each themes as [value, icon, label]}
+            <label title={ui.t(label)}><input type="radio" name="theme" {value} aria-label={ui.t(label)}
+              checked={(pendingAppearance ?? ui.preferences).theme === value}
+              onchange={() => saveAppearance({ theme: value })}><span><Icon name={icon} size={18} /></span></label>
+          {/each}
+        </div>
+      </fieldset>
+      <label class="field">{ui.t('语言')}
+        <select name="language" value={(pendingAppearance ?? ui.preferences).language} disabled={!!pendingAppearance}
+          onchange={event => saveAppearance({ language: event.currentTarget.value as Preferences['language'] })}><option value="zh-CN" lang="zh-CN">简体中文</option><option value="en" lang="en">English</option></select>
+      </label>
+      {#if pendingAppearance}<p class="field-hint" role="status">{ui.t('正在保存…')}</p>{/if}
+      {#if appearanceFailure}<p class="form-error" role="alert">{appearanceFailure}</p>{/if}
+    </div>
   </section>
+  <UpdateSettings />
   <PwaSettings />
   <DataSettings />
 </div>

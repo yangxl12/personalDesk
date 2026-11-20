@@ -1120,6 +1120,18 @@ body:has(.home-dock) .toast { bottom: calc(76px + env(safe-area-inset-bottom, 0p
 .model-form .button { justify-self: end; min-width: 88px; }
 .model-form input[readonly] { background: var(--glass); color: var(--muted); }
 
+/* 代码更新：版本号留给等宽字体，状态行跟安装状态同一套语言 */
+.update-version { display: flex; align-items: center; gap: 8px; margin: 0; color: var(--muted); font-size: 12.5px; }
+.update-version code {
+  padding: 2px 7px; border-radius: 7px; background: var(--glass);
+  color: var(--ink-soft); font-size: 12px;
+  font-family: ui-monospace, SFMono-Regular, "JetBrains Mono", Menlo, Consolas, monospace;
+}
+.update-status { display: flex; align-items: center; gap: 8px; margin: 0; color: var(--positive); font-size: 13px; font-weight: 600; }
+.update-status.is-new { color: var(--primary); }
+.update-status svg { flex: none; }
+.update-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 9px; }
+
 /* 安装到桌面（PWA） */
 .install-status { display: flex; align-items: center; gap: 8px; color: var(--positive); font-size: 13px; font-weight: 600; }
 .install-steps { display: grid; gap: 11px; margin: 0; padding: 0; list-style: none; }

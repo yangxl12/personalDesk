@@ -4,6 +4,7 @@
   import { page } from '$app/state'
   import { provideUi } from '#lib/ui.svelte'
   import { pwa, syncThemeColor } from '#lib/pwa.svelte'
+  import { updater } from '#lib/update.svelte'
   import Icon from '#lib/components/Icon.svelte'
   import Editor from '#lib/components/Editor.svelte'
 
@@ -22,6 +23,7 @@
 
   onMount(() => {
     pwa.init()
+    updater.init()
     window.addEventListener('buxu:revisions', localUpdate)
     return () => window.removeEventListener('buxu:revisions', localUpdate)
   })
