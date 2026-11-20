@@ -117,4 +117,30 @@ describe('sync engine', () => {
     await runSync()
     expect(await db.notes.count()).toBe(0)
   })
+
+  it('separates token scope errors from rate limiting on 403', async () => {
+    const original = globalThis.fetch
+    const forbidden = (headers: Record<string, string>) => vi.stubGlobal('fetch', vi.fn(async () =>
+      new Response('{"message":"Forbidden"}', { status: 403, headers })))
+    try {
+      forbidden({ 'x-ratelimit-remaining': '0' })
+      await expect(runSync()).rejects.toThrow('限流')
+      forbidden({})
+      await expect(runSync()).rejects.toThrow('Contents 权限')
+    } finally {
+      vi.stubGlobal('fetch', original)
+    }
+  })
+
+  it('drops tombstones older than a year after a successful push', async () => {
+    const now = Date.now()
+    const year = 365 * 86_400_000
+    await db.notes.put(note('a', 1, 100))
+    await db.tombstones.bulkPut([
+      { key: 'notes:old', table: 'notes', record_id: 'old', deleted_at: now - year - 86_400_000 },
+      { key: 'notes:fresh', table: 'notes', record_id: 'fresh', deleted_at: now - 1000 }
+    ])
+    await runSync()
+    expect((await db.tombstones.toArray()).map(row => row.key)).toEqual(['notes:fresh'])
+  })
 })

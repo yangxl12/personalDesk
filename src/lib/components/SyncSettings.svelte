@@ -125,6 +125,9 @@
     <p class="field-hint">
       {ui.t('细粒度令牌选好仓库后把 Contents 设为 Read and write；classic 令牌勾选 repo 就行。手机网页版要切到「桌面版网站」才看得到这些页面。')}
     </p>
+    <p class="field-hint">
+      {ui.t('注意：每次同步都是一次提交，GitHub 会保留全部历史版本，删除的记录能从仓库历史里找回。')}
+    </p>
   {/if}
 </section>
 

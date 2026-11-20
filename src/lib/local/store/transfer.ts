@@ -18,11 +18,11 @@ const goal = z.object({
 const item = z.object({
   id: z.uuid(), goal_id: z.uuid(), title: z.string().max(120),
   total_tasks: z.number().int().nonnegative(), done_tasks: z.number().int().nonnegative(),
-  created_at: stamp, version: z.number().int().positive()
+  created_at: stamp, updated_at: stamp.optional(), version: z.number().int().positive()
 })
 const task = z.object({
   id: z.uuid(), item_id: z.uuid(), title: z.string().max(120), done: z.union([z.literal(0), z.literal(1)]),
-  completed_at: stamp.nullable(), created_at: stamp, version: z.number().int().positive()
+  completed_at: stamp.nullable(), created_at: stamp, updated_at: stamp.optional(), version: z.number().int().positive()
 })
 const note = z.object({
   id: z.uuid(), title: z.string().max(120), body: z.string().min(1), summary: z.string(),
@@ -30,7 +30,9 @@ const note = z.object({
 })
 const transaction = z.object({
   id: z.uuid(), direction: z.enum(['income', 'expense']), amount_cents: amount,
-  occurred_on: z.string(), note: z.string().max(500), version: z.number().int().positive()
+  occurred_on: z.string(), note: z.string().max(500),
+  // 同步冲突裁决要用；老备份没有这个字段，导入后按 0 兜底参与合并。
+  updated_at: stamp.optional(), version: z.number().int().positive()
 })
 const saving = z.object({
   current_cents: amount.nullable(), target_cents: amount.nullable(), version: z.number().int().positive()

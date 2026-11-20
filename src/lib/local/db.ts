@@ -26,6 +26,8 @@ export type ItemRow = {
   total_tasks: number
   done_tasks: number
   created_at: number
+  // 与 TransactionRow 同理：同步裁决要拿它比大小，老数据按 0 兜底。
+  updated_at: number
   version: number
 }
 
@@ -36,6 +38,8 @@ export type TaskRow = {
   done: number
   completed_at: number | null
   created_at: number
+  // 与 TransactionRow 同理：同步裁决要拿它比大小，老数据按 created_at 兜底。
+  updated_at: number
   version: number
 }
 
@@ -55,6 +59,8 @@ export type TransactionRow = {
   amount_cents: number
   occurred_on: string
   note: string
+  // 同步冲突裁决要拿时间戳比大小（version 打平时用）；老数据没有这个字段时按 0 兜底。
+  updated_at: number
   version: number
 }
 

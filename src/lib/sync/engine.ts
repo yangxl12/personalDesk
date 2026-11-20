@@ -122,7 +122,14 @@ function call(config: SyncConfig, init: RequestInit) {
 
 function httpFault(response: Response): SyncError {
   if (response.status === 401) return new SyncError('TOKEN', 'Token 无效或没有访问该仓库的权限')
-  if (response.status === 403) return new SyncError('RATE', 'GitHub 拒绝了这次请求，多半是触发了限流')
+  if (response.status === 403) {
+    // 403 不只代表限流：细粒度令牌没勾 Contents 读写、没勾选仓库，classic 令牌没勾 repo
+    // 都走这里。用限流响应头区分，别让「权限配错了」的用户去等一个不存在的限流窗口。
+    if (response.headers.get('x-ratelimit-remaining') === '0') {
+      return new SyncError('RATE', 'GitHub 拒绝了这次请求，触发了限流，稍等一分钟再试')
+    }
+    return new SyncError('SCOPE', 'Token 没有这个仓库或其内容的读写权限，检查令牌的仓库授权和 Contents 权限')
+  }
   if (response.status === 404) return new SyncError('REPO', '找不到仓库或文件，检查用户名和仓库名，以及 Token 是否授权了这个仓库')
   if (response.status === 409 || response.status === 422) return new SyncError('CONFLICT', '另一端刚刚推送过相同文件')
   return new SyncError('HTTP', `GitHub 返回 ${response.status}`)
@@ -143,7 +150,11 @@ function encodeBase64(text: string) {
 
 function list<T>(value: unknown): T[] {
   if (!Array.isArray(value)) return []
-  return value.filter(item => !!item && typeof item === 'object' && typeof (item as { id?: unknown }).id === 'string') as T[]
+  // id 和 version 一起验：version 非数字的坏行进库后，合并比较会得到 NaN，
+  // 把版本链整个污染掉，再也无法收敛。
+  return value.filter(item => !!item && typeof item === 'object'
+    && typeof (item as { id?: unknown }).id === 'string'
+    && typeof (item as { version?: unknown }).version === 'number') as T[]
 }
 
 function single<T extends { version: number }>(value: unknown): T | null {
@@ -218,26 +229,26 @@ async function push(config: SyncConfig, payload: SyncPayload, sha: string | null
   if (!response.ok) throw httpFault(response)
 }
 
+// 调用点必须已在 write() 事务里：persist 自己不开事务，
+// 快照、合并、落库同属一个事务才能消灭写入丢失窗口。
 async function persist(data: SyncData, tombstones: TombstoneRow[], rev: number, conflicts: number, at: number) {
-  await write(async () => {
-    await db.goals.clear()
-    await db.goals.bulkPut(data.goals)
-    await db.items.clear()
-    await db.items.bulkPut(data.items)
-    await db.tasks.clear()
-    await db.tasks.bulkPut(data.tasks)
-    await db.notes.clear()
-    await db.notes.bulkPut(data.notes)
-    await db.transactions.clear()
-    await db.transactions.bulkPut(data.transactions)
-    if (data.savings) await db.savings.put({ ...data.savings, id: 'default' })
-    if (data.preferences) await db.preferences.put({ ...data.preferences, id: 'default' })
-    await db.tombstones.clear()
-    await db.tombstones.bulkPut(tombstones)
-    await db.meta.put({ key: REV_KEY, value: rev })
-    await db.meta.put({ key: AT_KEY, value: at })
-    await db.meta.put({ key: CONFLICT_KEY, value: conflicts })
-  })
+  await db.goals.clear()
+  await db.goals.bulkPut(data.goals)
+  await db.items.clear()
+  await db.items.bulkPut(data.items)
+  await db.tasks.clear()
+  await db.tasks.bulkPut(data.tasks)
+  await db.notes.clear()
+  await db.notes.bulkPut(data.notes)
+  await db.transactions.clear()
+  await db.transactions.bulkPut(data.transactions)
+  if (data.savings) await db.savings.put({ ...data.savings, id: 'default' })
+  if (data.preferences) await db.preferences.put({ ...data.preferences, id: 'default' })
+  await db.tombstones.clear()
+  await db.tombstones.bulkPut(tombstones)
+  await db.meta.put({ key: REV_KEY, value: rev })
+  await db.meta.put({ key: AT_KEY, value: at })
+  await db.meta.put({ key: CONFLICT_KEY, value: conflicts })
 }
 
 // 定时拉取时绝大多数情况两边完全一致，那就什么都不写。
@@ -264,12 +275,24 @@ function sameAsLocal(data: SyncData, tombstones: TombstoneRow[], local: SyncData
 
 async function refresh() {
   const revisions: Record<string, number> = {}
-  for (const module of MODULES) revisions[module] = await bump(module)
+  // 四个模块的 bump 收进一个事务：省三次事务开销，也保证四份修订号原子地一起生效。
+  await write(async () => {
+    for (const module of MODULES) revisions[module] = await bump(module)
+  })
   // 用独立事件名，既避开同步自己写库又触发一次「有本地改动」的调度，
   // 也让 engine 不必依赖 SvelteKit 的导航层，纯逻辑可以单测。
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent('buxu:sync-applied', { detail: revisions }))
   }
+}
+
+// 墓碑在 push 成功后再清：远端确认收到这批墓碑，本地就不必永远背着。
+// 窗口给一年——更久没同步过的设备重新上线时可能把已删的行带回来，
+// 但个人双设备一年不同步再上线的概率，比墓碑表无限膨胀的代价小得多。
+const GRAVE_MS = 365 * 86_400_000
+
+async function gcTombstones() {
+  await db.tombstones.where('deleted_at').below(Date.now() - GRAVE_MS).delete()
 }
 
 async function execute(): Promise<SyncReport> {
@@ -278,35 +301,44 @@ async function execute(): Promise<SyncReport> {
   await openDb()
 
   let last: SyncError | null = null
-  let dirty = false
+  let refreshed = false
   try {
     for (let attempt = 0; attempt < 3; attempt++) {
       const remote = await pull(config)
-      const local = await snapshot()
-      const plan = mergePayloads(remote.payload, local)
       const at = Date.now()
-
-      // 定时拉取大多撞在这个分支：两边一样，只更新「上次同步时间」，不写库也不刷新界面。
-      // conflicts 不为 0 说明有同 version 不同时间戳的碰撞，哪怕本地没赢也可能要吸收远端那份。
-      if (plan.adopted === 0 && plan.conflicts === 0 && sameAsLocal(plan.data, plan.tombstones, local)) {
-        await db.meta.put({ key: AT_KEY, value: at })
+      // 快照、合并、落库包在同一个 write() 事务里，两个网络交互（pull/push）都在事务外。
+      // 事务内只剩毫秒级的本地读写：同步进行中的用户写入要么被事务挡在外面（等它完成），
+      // 要么就包含在快照里随合并一起算账，不会再被 persist 的 clear() 误删。
+      const outcome = await write(async () => {
+        const local = await snapshot()
+        const plan = mergePayloads(remote.payload, local)
+        // 定时拉取大多撞在这个分支：两边一样，只更新「上次同步时间」，不写库也不刷新界面。
+        // conflicts 不为 0 说明有同 version 不同内容的碰撞，哪怕本地没赢也可能要吸收远端那份。
+        if (plan.adopted === 0 && plan.conflicts === 0 && sameAsLocal(plan.data, plan.tombstones, local)) {
+          await db.meta.put({ key: AT_KEY, value: at })
+          return null
+        }
+        const rev = (remote.payload?.rev ?? 0) + (plan.adopted > 0 ? 1 : 0)
+        await persist(plan.data, plan.tombstones, rev, plan.conflicts, at)
+        return { plan, rev }
+      })
+      if (!outcome) {
         return { rev: remote.payload?.rev ?? 0, pushed: false, conflicts: 0, at }
       }
 
-      const rev = (remote.payload?.rev ?? 0) + (plan.adopted > 0 ? 1 : 0)
-      dirty = true
-      await persist(plan.data, plan.tombstones, rev, plan.conflicts, at)
-
-      if (plan.adopted === 0) {
-        return { rev, pushed: false, conflicts: plan.conflicts, at }
+      refreshed = true
+      if (outcome.plan.adopted === 0) {
+        return { rev: outcome.rev, pushed: false, conflicts: outcome.plan.conflicts, at }
       }
 
       const payload: SyncPayload = {
-        format: FORMAT, rev, deviceId: deviceId(), updatedAt: at, data: plan.data, tombstones: plan.tombstones
+        format: FORMAT, rev: outcome.rev, deviceId: deviceId(),
+        updatedAt: at, data: outcome.plan.data, tombstones: outcome.plan.tombstones
       }
       try {
         await push(config, payload, remote.sha)
-        return { rev, pushed: true, conflicts: plan.conflicts, at }
+        await gcTombstones()
+        return { rev: outcome.rev, pushed: true, conflicts: outcome.plan.conflicts, at }
       } catch (failure) {
         // sha 对不上说明另一端在这几秒里推过，重新拉一次再合并，最多三轮。
         if (failure instanceof SyncError && failure.code === 'CONFLICT' && attempt < 2) {
@@ -318,7 +350,7 @@ async function execute(): Promise<SyncReport> {
     }
     throw last ?? new SyncError('CONFLICT', '另一端持续在写，稍后再试')
   } finally {
-    if (dirty) await refresh()
+    if (refreshed) await refresh()
   }
 }
 

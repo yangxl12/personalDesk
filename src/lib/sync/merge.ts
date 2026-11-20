@@ -58,13 +58,22 @@ function mergeRows<T extends { id: string; version: number } & Stamped>(remote: 
   return { rows: [...merged.values()], adopted, conflicts }
 }
 
+// 单行没有时间戳可比，version 打平就退化成比内容。字段序在两端可能不同（JSON 解析
+// 与对象字面量的顺序不一致），先把 key 排序再序列化，避免把同一份数据误判成冲突。
+const canon = (value: object) => JSON.stringify(value, Object.keys(value).sort())
+
 function mergeSingle<T extends { version: number }>(remote: T | null, local: T | null) {
-  if (!local) return { value: remote, adopted: false }
-  if (!remote) return { value: local, adopted: true }
-  if (local.version === remote.version) return { value: local, adopted: false }
+  if (!local) return { value: remote, adopted: false, conflict: false }
+  if (!remote) return { value: local, adopted: true, conflict: false }
+  if (local.version === remote.version) {
+    // 内容一致是常态（轮询两端都吸收过同一份），不算冲突；内容不同说明两端各自改到了
+    // 同一个版本号，云端先推的那份算赢，本地吸收它并记一笔冲突让用户知情。
+    const same = canon(local) === canon(remote)
+    return { value: same ? local : remote, adopted: false, conflict: !same }
+  }
   return local.version > remote.version
-    ? { value: local, adopted: true }
-    : { value: remote, adopted: false }
+    ? { value: local, adopted: true, conflict: false }
+    : { value: remote, adopted: false, conflict: false }
 }
 
 function mergeTombstones(remote: TombstoneRow[], local: TombstoneRow[]) {
@@ -105,6 +114,46 @@ function reconcile<T extends { id: string } & Stamped>(table: string, rows: T[],
   return { rows: kept, revived }
 }
 
+// total_tasks/done_tasks 是从任务表现算出来的冗余计数，跨端合并按 version+时间戳
+// 二选一时会丢掉一端的增量（A 删任务、B 勾任务，两边都 bump 了同一个父行的 version）。
+// 合并完成后从任务表现算一遍：有出入的行替换成修正值并 bump version，
+// 修正数由调用方计入 adopted，让修正结果随这次同步传播到云端。
+// 不回填 updated_at：goals 列表按它排序，回填会让目标卡片跳到最前面。
+export function reconcileCounts(data: SyncData) {
+  let repaired = 0
+  const perItem = new Map<string, { total: number; done: number }>()
+  for (const task of data.tasks) {
+    const cell = perItem.get(task.item_id) ?? { total: 0, done: 0 }
+    cell.total += 1
+    cell.done += task.done ? 1 : 0
+    perItem.set(task.item_id, cell)
+  }
+  const perGoal = new Map<string, { total: number; done: number }>()
+  const items = data.items.map(item => {
+    const cell = perItem.get(item.id) ?? { total: 0, done: 0 }
+    if (item.total_tasks !== cell.total || item.done_tasks !== cell.done) {
+      repaired += 1
+      item = { ...item, total_tasks: cell.total, done_tasks: cell.done, version: item.version + 1 }
+    }
+    const sum = perGoal.get(item.goal_id) ?? { total: 0, done: 0 }
+    sum.total += item.total_tasks
+    sum.done += item.done_tasks
+    perGoal.set(item.goal_id, sum)
+    return item
+  })
+  const goals = data.goals.map(goal => {
+    const cell = perGoal.get(goal.id) ?? { total: 0, done: 0 }
+    if (goal.total_tasks !== cell.total || goal.done_tasks !== cell.done) {
+      repaired += 1
+      goal = { ...goal, total_tasks: cell.total, done_tasks: cell.done, version: goal.version + 1 }
+    }
+    return goal
+  })
+  data.items = items
+  data.goals = goals
+  return repaired
+}
+
 export function mergePayloads(remote: SyncPayload | null, local: SyncData & { tombstones: TombstoneRow[] }) {
   const base = remote?.data
   const goals = mergeRows(base?.goals ?? [], local.goals)
@@ -138,12 +187,14 @@ export function mergePayloads(remote: SyncPayload | null, local: SyncData & { to
     savings: savings.value,
     preferences: preferences.value
   }
+  const repaired = reconcileCounts(data)
 
   return {
     data,
     tombstones: revived.size ? tombstones.rows.filter(row => !revived.has(row.key)) : tombstones.rows,
     adopted: goals.adopted + items.adopted + tasks.adopted + notes.adopted + transactions.adopted
-      + (savings.adopted ? 1 : 0) + (preferences.adopted ? 1 : 0) + tombstones.added,
+      + (savings.adopted ? 1 : 0) + (preferences.adopted ? 1 : 0) + tombstones.added + repaired,
     conflicts: goals.conflicts + items.conflicts + tasks.conflicts + notes.conflicts + transactions.conflicts
+      + (savings.conflict ? 1 : 0) + (preferences.conflict ? 1 : 0)
   }
 }

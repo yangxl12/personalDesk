@@ -280,6 +280,7 @@ async function ancestors(itemId: string, now: number, taskDelta: number, doneDel
   item.version += 1
   item.total_tasks += taskDelta
   item.done_tasks += doneDelta
+  item.updated_at = now
   await db.items.put(item)
   const goal = await db.goals.get(item.goal_id)
   if (!goal) throw notFound()
@@ -295,7 +296,8 @@ async function container(goalId: string, now: number, title: string) {
     .sort((left, right) => left.created_at - right.created_at || (left.id < right.id ? -1 : 1))
   if (items[0]) return items[0]
   const created: ItemRow = {
-    id: randomId(), goal_id: goalId, title, total_tasks: 0, done_tasks: 0, created_at: now, version: 1
+    id: randomId(), goal_id: goalId, title, total_tasks: 0, done_tasks: 0,
+    created_at: now, updated_at: now, version: 1
   }
   await db.items.put(created)
   return created
@@ -361,7 +363,7 @@ async function execute(operation: Operation, ref: string | null, input: unknown,
       const item = await container(goal.id, now, value.title)
       const row: TaskRow = {
         id: randomId(), item_id: item.id, title: value.title, done: 0,
-        completed_at: null, created_at: now, version: 1
+        completed_at: null, created_at: now, updated_at: now, version: 1
       }
       await db.tasks.put(row)
       await ancestors(item.id, now, 1, 0)
@@ -376,6 +378,7 @@ async function execute(operation: Operation, ref: string | null, input: unknown,
       if (value.title !== undefined) task.title = value.title
       task.completed_at = done ? task.completed_at ?? now : null
       task.done = done
+      task.updated_at = now
       task.version += 1
       await db.tasks.put(task)
       await ancestors(task.item_id, now, 0, done - previous)
@@ -421,7 +424,7 @@ async function execute(operation: Operation, ref: string | null, input: unknown,
       const value = input as typeof inputs.transactionCreate._output
       const row: TransactionRow = {
         id: randomId(), direction: value.direction, amount_cents: value.amount,
-        occurred_on: value.occurredOn, note: value.note, version: 1
+        occurred_on: value.occurredOn, note: value.note, updated_at: now, version: 1
       }
       await db.transactions.put(row)
       return row
@@ -434,6 +437,7 @@ async function execute(operation: Operation, ref: string | null, input: unknown,
       row.amount_cents = value.amount
       row.occurred_on = value.occurredOn
       row.note = value.note
+      row.updated_at = now
       row.version += 1
       await db.transactions.put(row)
       return row

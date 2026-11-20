@@ -324,6 +324,7 @@ export const english: Record<string, string> = {
   "新建细粒度令牌": "Create a fine-grained token",
   "新建 classic 令牌": "Create a classic token",
   "细粒度令牌选好仓库后把 Contents 设为 Read and write；classic 令牌勾选 repo 就行。手机网页版要切到「桌面版网站」才看得到这些页面。": "For a fine-grained token, pick the repository and set Contents to Read and write. For a classic token, just tick repo. On a phone browser you need the desktop site to reach these pages.",
+  "注意：每次同步都是一次提交，GitHub 会保留全部历史版本，删除的记录能从仓库历史里找回。": "Note: each sync is a commit, and GitHub keeps every revision — deleted records stay recoverable from the repository history.",
   "请填写访问令牌": "Enter an access token",
   "仓库要写成 owner/repo 的形式": "Repository should look like owner/repo",
   "导出": "Export",

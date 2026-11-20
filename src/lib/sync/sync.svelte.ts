@@ -7,7 +7,7 @@ type Status = Awaited<ReturnType<typeof syncStatus>>
 const POLL_MS = 90_000
 
 // 同步状态收在这里，界面只读状态、不碰 GitHub API。
-// 触发点四个：启动一次、本地写入后延迟 3 秒、回到前台一次、可见期间定时拉取。
+// 触发点五个：启动一次、本地写入后延迟 3 秒、回到前台一次、恢复联网一次、可见期间定时拉取。
 class SyncState {
   configured = $state(false)
   busy = $state(false)
@@ -17,22 +17,44 @@ class SyncState {
   error = $state('')
   notice = $state('')
   #started = false
+  #attached = false
   #timer: ReturnType<typeof setTimeout> | null = null
   #ticker: ReturnType<typeof setInterval> | null = null
+  // busy 期间发生的本地写入记在这里，等这轮同步结束立即补排，而不是等下一次轮询。
+  #pending = false
 
+  // 本地写入收口：输入过程会连续提交，攒够 3 秒静默再推，避免每敲一下就发一次请求。
   #mutated = () => {
-    if (!readConfig() || this.busy) return
+    if (!readConfig()) return
+    if (this.busy) {
+      this.#pending = true
+      return
+    }
+    this.#schedule()
+  }
+
+  #schedule() {
     if (this.#timer) clearTimeout(this.#timer)
-    // 输入过程会连续提交，攒够 3 秒静默再推，避免每敲一下就发一次请求。
     this.#timer = setTimeout(() => { void this.sync('auto') }, 3000)
   }
 
   #visible = () => {
     if (document.visibilityState !== 'visible') {
       this.#stopTick()
+      // 切后台不带着被攒下的那次推：回前台会立即同步一次，这些写入不会丢。
+      if (this.#timer) {
+        clearTimeout(this.#timer)
+        this.#timer = null
+      }
       return
     }
     this.#startTick()
+    if (!readConfig() || this.busy) return
+    void this.sync('auto')
+  }
+
+  // 断网期间的写入在恢复联网的第一时间补推，不用等轮询或切前台。
+  #online = () => {
     if (!readConfig() || this.busy) return
     void this.sync('auto')
   }
@@ -52,6 +74,28 @@ class SyncState {
     this.#ticker = null
   }
 
+  #attach() {
+    if (this.#attached || typeof window === 'undefined') return
+    this.#attached = true
+    window.addEventListener('buxu:revisions', this.#mutated)
+    window.addEventListener('online', this.#online)
+    document.addEventListener('visibilitychange', this.#visible)
+  }
+
+  #detach() {
+    if (!this.#attached) return
+    this.#attached = false
+    window.removeEventListener('buxu:revisions', this.#mutated)
+    window.removeEventListener('online', this.#online)
+    document.removeEventListener('visibilitychange', this.#visible)
+    this.#stopTick()
+    if (this.#timer) {
+      clearTimeout(this.#timer)
+      this.#timer = null
+    }
+    this.#pending = false
+  }
+
   async init() {
     if (this.#started || typeof window === 'undefined') return
     this.#started = true
@@ -60,8 +104,7 @@ class SyncState {
     const status = await syncStatus()
     this.#apply(status)
     if (!status.configured) return
-    window.addEventListener('buxu:revisions', this.#mutated)
-    document.addEventListener('visibilitychange', this.#visible)
+    this.#attach()
     this.#startTick()
     void this.sync('auto')
   }
@@ -81,6 +124,10 @@ class SyncState {
       this.error = failure instanceof Error ? failure.message : '同步失败'
     } finally {
       this.busy = false
+      if (this.#pending) {
+        this.#pending = false
+        this.#schedule()
+      }
     }
   }
 
@@ -89,11 +136,16 @@ class SyncState {
     this.configured = true
     this.error = ''
     this.notice = ''
+    // init 只在「启动时已配置」的场景挂监听；首次连接要在这里补挂，
+    // 否则连接后的本地写入、切前台、恢复联网全都触发不了同步。
+    this.#attach()
+    this.#startTick()
     void this.sync('manual')
   }
 
   disconnect() {
     clearConfig()
+    this.#detach()
     this.configured = false
     this.lastAt = 0
     this.conflicts = 0
