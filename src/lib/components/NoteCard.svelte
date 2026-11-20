@@ -41,7 +41,7 @@
     <button type="button" class="button icon-button" aria-label={ui.t('编辑思考')} onclick={() => void editNote(ui, note)}><Icon name="edit" size={15} /></button>
     <button type="button" class="button icon-button" aria-label={ui.t('删除思考')} onclick={() => remove(ui, '/notes/' + note.id, { version: note.version }, ui.t('删除这条思考记录？'))}><Icon name="trash" size={15} /></button>
   </div>
-  <span class="note-meta"><Icon name="notes" size={15} /><time datetime={new Date(note.updated_at).toISOString()}>{ui.date(note.updated_at)}</time></span>
+  <span class="note-meta"><time datetime={new Date(note.updated_at).toISOString()}>{ui.date(note.updated_at)}</time></span>
   {#if note.title}<strong>{note.title}</strong>{/if}
   <div class="note-body" class:clipped={clipped && !expanded} class:expanded bind:this={body}
     style:--note-cap={cap ? cap + 'px' : undefined}
