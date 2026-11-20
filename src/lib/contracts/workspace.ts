@@ -79,7 +79,8 @@ export type Totals = { income: string; expense: string; balance: string }
 export type Finance = List<Transaction> & { month: string; totals: Totals; savings: Savings }
 export type DashboardGoal = Goal & { plan: GoalPlan }
 export type Dashboard = {
-  goals: DashboardGoal[]; hasGoals: boolean; notes: NoteSummary[]; month: string; totals: Totals; savings: Savings
+  // 笔记卡片直接渲染 markdown，所以工作台要带正文，不能只给摘要。
+  goals: DashboardGoal[]; hasGoals: boolean; notes: Note[]; month: string; totals: Totals; savings: Savings
 }
 
 // 同一格式的构造不便宜，today 在每次载入工作台、记账弹窗打开时都会被调用：按时区缓存。

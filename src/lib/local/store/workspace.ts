@@ -212,7 +212,7 @@ export async function dashboard(): Promise<Dashboard> {
   return {
     goals: goals.map(goal => ({ ...goal, plan: plan(goal) }) as DashboardGoal),
     hasGoals: goals.length > 0,
-    notes: notes.map(summaryOf),
+    notes,
     month,
     totals: totals(monthRows),
     savings: await savings()
