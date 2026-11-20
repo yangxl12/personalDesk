@@ -111,7 +111,19 @@
       </div>
     </form>
     <p class="field-hint">
-      {ui.t('建议建一个私有空仓库，初始化时勾上 README，避免空仓库写不进去。令牌只勾该仓库的 Contents 读写权限就够了。')}
+      {ui.t('仓库要私有，建的时候勾上 Add a README，空仓库写不进去。')}
+    </p>
+    <p class="field-hint sync-links">
+      <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noreferrer noopener">
+        {ui.t('新建细粒度令牌')}
+      </a>
+      <span aria-hidden="true">·</span>
+      <a href="https://github.com/settings/tokens/new" target="_blank" rel="noreferrer noopener">
+        {ui.t('新建 classic 令牌')}
+      </a>
+    </p>
+    <p class="field-hint">
+      {ui.t('细粒度令牌选好仓库后把 Contents 设为 Read and write；classic 令牌勾选 repo 就行。手机网页版要切到「桌面版网站」才看得到这些页面。')}
     </p>
   {/if}
 </section>
@@ -130,6 +142,13 @@
   .sync-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
   .sync-actions .button { min-height: 34px; padding: 4px 12px; font-size: 12px; }
   .sync-intro { margin-bottom: 12px; }
+  .sync-links { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: -6px; }
+  .sync-links a {
+    color: var(--primary); text-decoration: none;
+    border-bottom: 1px solid var(--primary-tint);
+    transition: border-color .2s, color .2s;
+  }
+  .sync-links a:hover { border-bottom-color: var(--primary); }
   .sync-form { display: grid; gap: 12px; }
   .sync-field { display: grid; gap: 6px; }
   .sync-field > span { font-size: 12.5px; font-weight: 600; }
