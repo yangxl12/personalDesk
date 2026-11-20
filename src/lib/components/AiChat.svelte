@@ -292,18 +292,21 @@
   const prompts = ['帮我看看有哪些进行中的目标', '总结最近的思考记录', '查看本月的收支情况']
 </script>
 
-<div class="card ai-page">
+<div class="ai-page">
   <div class="ai-toolbar">
-    {#if ui.chatModel.models.length > 1}
-      <select class="chat-model" aria-label={ui.t('当前模型')} value={ui.chatModel.activeRef ?? ''} disabled={pending || switchingModel || generating}
-        onchange={event => switchModel(event.currentTarget)}>
-        {#each ui.chatModel.models as profile (profile.ref)}
-          <option value={profile.ref}>{profile.label || profile.id} · {profile.provider === 'deepseek' ? 'DeepSeek' : ui.t('自定义兼容接口')}</option>
-        {/each}
-      </select>
-    {:else}
-      <small class="ai-model-name">{ui.chatModel.models[0]?.label || ui.chatModel.models[0]?.id}</small>
-    {/if}
+    <div class="ai-model">
+      <span class="ai-model-dot" aria-hidden="true"></span>
+      {#if ui.chatModel.models.length > 1}
+        <select class="chat-model" aria-label={ui.t('当前模型')} value={ui.chatModel.activeRef ?? ''} disabled={pending || switchingModel || generating}
+          onchange={event => switchModel(event.currentTarget)}>
+          {#each ui.chatModel.models as profile (profile.ref)}
+            <option value={profile.ref}>{profile.label || profile.id} · {profile.provider === 'deepseek' ? 'DeepSeek' : ui.t('自定义兼容接口')}</option>
+          {/each}
+        </select>
+      {:else}
+        <small class="ai-model-name">{ui.chatModel.models[0]?.label || ui.chatModel.models[0]?.id}</small>
+      {/if}
+    </div>
     <div class="ai-tools">
       <button class="button secondary" class:active={view === 'history'} type="button" aria-pressed={view === 'history'}
         title={ui.t('AI 对话历史')} onclick={toggleHistory}><Icon name="chats" size={16} />{ui.t('历史')}</button>
@@ -365,11 +368,17 @@
         </article>
       {:else}
         <div class="chat-welcome">
-          <span class="welcome-mark"><Icon name="spark" size={20} /></span>
-          <strong>{ui.t('你想聊些什么？')}</strong>
+          <span class="welcome-mark"><Icon name="spark" size={24} /></span>
+          <div class="welcome-copy">
+            <strong>{ui.t('你想聊些什么？')}</strong>
+            <small>{ui.t('挑一个开始，或者直接输入你的问题')}</small>
+          </div>
           <div class="prompt-chips">
             {#each prompts as prompt}
-              <button class="prompt-chip" type="button" onclick={() => { draft = ui.t(prompt); textarea.focus() }}>{ui.t(prompt)}</button>
+              <button class="prompt-chip" type="button" onclick={() => { draft = ui.t(prompt); textarea.focus() }}>
+                <span>{ui.t(prompt)}</span>
+                <Icon name="upRight" size={14} />
+              </button>
             {/each}
           </div>
         </div>

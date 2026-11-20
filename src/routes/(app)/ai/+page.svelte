@@ -25,9 +25,9 @@
 {#if configured}
   <AiChat />
 {:else}
-  <div class="card ai-page ai-unconfigured">
+  <div class="ai-page ai-unconfigured">
     <div class="ai-unconfigured-inner">
-      <span class="empty-icon"><Icon name="spark" size={22} /></span>
+      <span class="welcome-mark"><Icon name="spark" size={24} /></span>
       <strong>{ui.t('还没有配置 AI 模型')}</strong>
       <p>{ui.t('到设置里填一个 DeepSeek 或兼容接口的模型和 API Key，就能开始对话。')}</p>
       <a class="button primary" href={resolve('settings')}><Icon name="settings" size={17} />{ui.t('去设置')}</a>
