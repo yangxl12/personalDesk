@@ -101,4 +101,20 @@ describe('sync engine', () => {
     await runSync()
     expect(await db.notes.count()).toBe(0)
   })
+
+  // 另一端还留着这条笔记的情形：墓碑必须在解析阶段活下来，否则删除传不过去。
+  it('deletes a locally surviving row when the remote tombstone says so', async () => {
+    await db.notes.put(note('a', 1, 100))
+    await runSync()
+
+    await db.notes.delete('a')
+    await db.tombstones.put({ key: 'notes:a', table: 'notes', record_id: 'a', deleted_at: 200 })
+    await runSync()
+
+    await db.notes.put(note('a', 1, 100))
+    await db.tombstones.clear()
+
+    await runSync()
+    expect(await db.notes.count()).toBe(0)
+  })
 })

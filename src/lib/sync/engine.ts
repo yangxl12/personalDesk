@@ -151,6 +151,18 @@ function single<T extends { version: number }>(value: unknown): T | null {
   return typeof (value as { version?: unknown }).version === 'number' ? value as T : null
 }
 
+// 实体行的主键是 id，墓碑的主键是 key，两者不能共用同一个过滤器。
+// 这里曾经复用 list()，结果墓碑因为「没有 id」被整批丢掉，删除就传不到另一端。
+function graves(value: unknown): TombstoneRow[] {
+  if (!Array.isArray(value)) return []
+  return value.filter(item => {
+    if (!item || typeof item !== 'object') return false
+    const row = item as Record<string, unknown>
+    return typeof row.key === 'string' && typeof row.table === 'string'
+      && typeof row.record_id === 'string' && typeof row.deleted_at === 'number'
+  }) as TombstoneRow[]
+}
+
 function parse(raw: unknown): SyncPayload | null {
   if (!raw || typeof raw !== 'object') return null
   const value = raw as Record<string, unknown>
@@ -170,7 +182,7 @@ function parse(raw: unknown): SyncPayload | null {
       savings: single<Savings & { id: string }>(data.savings),
       preferences: single<Preferences & { id: string }>(data.preferences)
     },
-    tombstones: list<TombstoneRow>(value.tombstones)
+    tombstones: graves(value.tombstones)
   }
 }
 
