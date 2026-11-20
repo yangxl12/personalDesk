@@ -1,6 +1,7 @@
 # personalDesk（步序）项目笔记
 
 ## 协作约定
+- **动代码前必须先 `git fetch` 并对比 `origin/main`**：`git log --oneline HEAD..origin/main` 非空就先同步再动手。本项目多次被整体重构（2026-11-20 从 SSR/SQLite 换成 adapter-static + Dexie + PWA），不看远端会在过期架构上白写一堆提交。
 - 每次代码改动提交时，把 `.workbuddy/memory/` 工作日志**一起** `git add -A` + commit 并直接 push 到 `origin/main`，不留未提交的尾巴。
 
 ## 技术要点
