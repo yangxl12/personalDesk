@@ -7,6 +7,7 @@
   import { updater } from '#lib/update.svelte'
   import Icon from '#lib/components/Icon.svelte'
   import Editor from '#lib/components/Editor.svelte'
+  import NoteComposer from '#lib/components/NoteComposer.svelte'
 
   let { data, children } = $props()
   const ui = provideUi(() => data.preferences, () => data.model)
@@ -53,5 +54,8 @@
 </div>
 {#if ui.editor}
   {#key ui.editor}<Editor spec={ui.editor} />{/key}
+{/if}
+{#if ui.composer}
+  <NoteComposer />
 {/if}
 {#if ui.notice}<div class="toast" role="status">{ui.t(ui.notice)}</div>{/if}

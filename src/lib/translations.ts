@@ -240,6 +240,7 @@ export const english: Record<string, string> = {
   "数据已在另一端更新，当前输入已保留。": "Data changed on another device. Your draft is preserved.",
   "新建任务": "New task",
   "新建思考": "New note",
+  "写点什么…停下就自动保存": "Write something… it saves when you pause",
   "暂无已完成的目标": "No completed goals",
   "更新存款": "Update savings",
   "月份": "Month",

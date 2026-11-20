@@ -11,18 +11,6 @@ export function createTask(ui: WorkspaceUi, goalId: string) {
   })
 }
 
-export function createNote(ui: WorkspaceUi) {
-  ui.open({
-    title: '新建思考',
-    path: '/notes',
-    method: 'POST',
-    fields: [
-      { name: 'title', label: '标题（选填）' },
-      { name: 'body', label: '正文', type: 'textarea', required: true }
-    ]
-  })
-}
-
 export async function editNote(ui: WorkspaceUi, note: NoteSummary) {
   try {
     const { data } = await request<Note>('/notes/' + note.id)

@@ -3,7 +3,7 @@
   import { page } from '$app/state'
   import { useUi } from '#lib/ui.svelte'
   import { request } from '#lib/client'
-  import { createNote, editTransaction } from '#lib/editors'
+  import { editTransaction } from '#lib/editors'
   import EmptyArt from '#lib/components/EmptyArt.svelte'
   import Icon from '#lib/components/Icon.svelte'
   import Savings from '#lib/components/Savings.svelte'
@@ -72,14 +72,9 @@
       <GoalCards goals={dashboard.goals} />
     </div>
 
-    <div class="home-slide" inert={section !== 'notes'} aria-hidden={section !== 'notes'}>
+    <div class="home-slide notes-slide" class:current={section === 'notes'} inert={section !== 'notes'} aria-hidden={section !== 'notes'}>
       <section class="card notes-card home-card" aria-label={ui.t('思考记录')}>
-        <header class="section-head">
-          <h2 class="sr-only">{ui.t('思考记录')}</h2>
-          <div class="section-actions">
-            <button type="button" class="button icon-button" aria-label={ui.t('新建思考')} onclick={() => createNote(ui)}><Icon name="plus" size={18} /></button>
-          </div>
-        </header>
+        <h2 class="sr-only">{ui.t('思考记录')}</h2>
         <div class="home-scroll">
           {#if dashboard.notes.length}
             <div class="note-grid">{#each dashboard.notes as note (note.id)}<NoteCard {note} />{/each}</div>
@@ -88,6 +83,9 @@
           {/if}
         </div>
       </section>
+      <button type="button" class="fab note-fab" aria-label={ui.t('新建思考')} title={ui.t('新建思考')} onclick={() => ui.compose()}>
+        <Icon name="plus" size={24} />
+      </button>
     </div>
 
     <div class="home-slide finance-slide" class:current={section === 'finance'} inert={section !== 'finance'} aria-hidden={section !== 'finance'}>
@@ -99,7 +97,7 @@
           </section>
         </div>
       </section>
-      <button type="button" class="finance-fab" aria-label={ui.t('记一笔')} onclick={() => editTransaction(ui, undefined, afterRecord)}>
+      <button type="button" class="fab finance-fab" aria-label={ui.t('记一笔')} onclick={() => editTransaction(ui, undefined, afterRecord)}>
         <Icon name="plus" size={24} />
       </button>
     </div>

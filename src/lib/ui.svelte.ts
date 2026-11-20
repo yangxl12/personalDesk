@@ -26,6 +26,8 @@ export class WorkspaceUi {
   chatModel: ModelStatus
   attachment = $state<Attachment | null>(null)
   editor = $state<EditorSpec | null>(null)
+  // 新建思考用独立的一层：只有一个正文框，边写边存，塞不进通用的表单弹窗。
+  composer = $state(false)
   remoteChange = $state(false)
   notice = $state('')
   #timer: ReturnType<typeof setTimeout> | undefined
@@ -83,6 +85,14 @@ export class WorkspaceUi {
   close() {
     this.editor = null
     this.remoteChange = false
+  }
+
+  compose() {
+    this.composer = true
+  }
+
+  endCompose() {
+    this.composer = false
   }
 
   async save(spec: EditorSpec, body: object, key: string) {
