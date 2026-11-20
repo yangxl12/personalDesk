@@ -84,7 +84,7 @@
         </div>
       </section>
       <button type="button" class="fab note-fab" aria-label={ui.t('新建思考')} title={ui.t('新建思考')} onclick={() => ui.compose()}>
-        <Icon name="plus" size={24} />
+        <Icon name="plus" size={22} />
       </button>
     </div>
 
@@ -98,7 +98,7 @@
         </div>
       </section>
       <button type="button" class="fab finance-fab" aria-label={ui.t('记一笔')} onclick={() => editTransaction(ui, undefined, afterRecord)}>
-        <Icon name="plus" size={24} />
+        <Icon name="plus" size={22} />
       </button>
     </div>
   </div>
