@@ -620,9 +620,9 @@ h2 { font-size: 16px; font-weight: 650; letter-spacing: -.012em; }
   box-shadow: 0 18px 32px -14px var(--primary), 0 6px 14px -8px rgba(30, 20, 70, .45), inset 0 1px 0 rgba(255, 255, 255, .42);
   transition: transform .35s var(--ease), box-shadow .4s var(--ease);
 }
-/* 记一笔落右下角，新建思考落左下角 */
+/* 记一笔、新建思考都落在卡片右下角，两块面板各自一个，不会同屏撞上 */
 .finance-fab { right: calc(var(--pad) + 20px); }
-.note-fab { left: calc(var(--pad) + 20px); }
+.note-fab { right: calc(var(--pad) + 20px); }
 .fab svg { position: relative; z-index: 1; transition: transform .45s var(--ease); }
 /* 和主按钮同一道光扫过，hover 时提示可点 */
 .fab::after {
@@ -1285,7 +1285,7 @@ body:has(.home-dock) .toast { bottom: calc(76px + env(safe-area-inset-bottom, 0p
   /* 卡片内边距收窄后，悬浮按钮跟着贴边一些 */
   .fab { bottom: 16px; width: 50px; height: 50px; }
   .finance-fab { right: calc(var(--pad) + 16px); }
-  .note-fab { left: calc(var(--pad) + 16px); }
+  .note-fab { right: calc(var(--pad) + 16px); }
   .finance-card .home-scroll, .notes-card .home-scroll { padding-bottom: 58px; }
 }
 
