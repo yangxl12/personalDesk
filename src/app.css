@@ -494,7 +494,12 @@ body:has(.home-dock) { overflow: hidden; }
 .rail-prev svg { transform: rotate(180deg); }
 .rail-arrow:hover { color: var(--primary); border-color: var(--primary-tint); }
 .rail-arrow:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
-.rail-arrow:disabled { opacity: 0; pointer-events: none; }
+.rail-arrow:disabled {
+  /* 到头了就淡出，但不能把点击漏给下面的卡片：漏过去正好会点在任务勾选框或「新建目标」上，
+     看着就像箭头点出了别的弹窗。所以只做透明，仍然吃掉点击。 */
+  opacity: 0;
+  cursor: default;
+}
 .rail-scrollbar {
   position: absolute; left: 0; right: 0; bottom: -14px; z-index: 2;
   display: none; align-items: center; height: 6px;

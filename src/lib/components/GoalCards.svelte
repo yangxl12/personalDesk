@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { onMount } from 'svelte'
   import type { DashboardGoal } from '#lib/contracts/workspace'
   import { useUi } from '#lib/ui.svelte'
   import { createTask } from '#lib/editors'
@@ -19,35 +18,99 @@
   let atEnd = $state(true)
   let thumb = $state({ width: 0, left: 0 })
 
-  // 桌面端没有触摸滑动，靠箭头和可拖动的滚动条移动轨道。
+  // 每张卡片对齐到轨道左沿时的 scrollLeft。第一张恒为 0，其余按卡片的实测间距推，
+  // CSS 里的 padding / peek / 列数怎么改都自动对得上。
+  let stops: number[] = []
+  // 正在滚向的卡片下标。连点时从这里继续往前推，动画没跑完也不会把后几次点击吃掉。
+  let pending: number | null = null
+  let watchdog = 0
+
+  function maxScroll(el: HTMLElement) {
+    return Math.max(0, el.scrollWidth - el.clientWidth)
+  }
+
+  function readStops() {
+    if (!rail) return [0]
+    const cards = Array.from(rail.children) as HTMLElement[]
+    if (!cards.length) return [0]
+    const base = cards[0].getBoundingClientRect().left
+    const max = maxScroll(rail)
+    const list = cards.map(card => Math.min(max, Math.max(0, Math.round(card.getBoundingClientRect().left - base))))
+    // 末几张会被 max 夹到同一个位置，重复的去掉，免得连点空转
+    return list.filter((value, index) => index === 0 || value > list[index - 1])
+  }
+
+  function nearest(list: number[], left: number) {
+    let best = 0
+    for (let i = 1; i < list.length; i++) {
+      if (Math.abs(list[i] - left) < Math.abs(list[best] - left)) best = i
+    }
+    return best
+  }
+
   function measure() {
     if (!rail) return
-    const max = rail.scrollWidth - rail.clientWidth
+    const max = maxScroll(rail)
+    const left = rail.scrollLeft
+    stops = readStops()
+    // 到位就把 pending 交还给实测位置，之后按真实滚动位置算首尾
+    if (pending !== null && Math.abs(left - (stops[pending] ?? left)) <= 2) pending = null
+    const index = pending ?? nearest(stops, left)
     scrollable = max > 4
-    atStart = rail.scrollLeft <= 2
-    atEnd = rail.scrollLeft >= max - 2
+    atStart = !scrollable || index <= 0
+    atEnd = !scrollable || index >= stops.length - 1
     if (!scrollable) {
       thumb = { width: 0, left: 0 }
       return
     }
-    const width = Math.max(48, rail.clientWidth * rail.clientWidth / rail.scrollWidth)
-    const left = rail.scrollLeft / max * (rail.clientWidth - width)
-    thumb = { width, left }
+    const width = Math.min(rail.clientWidth, Math.max(44, rail.clientWidth * rail.clientWidth / Math.max(1, rail.scrollWidth)))
+    const travel = Math.max(0, rail.clientWidth - width)
+    thumb = { width, left: max > 0 ? Math.min(travel, Math.max(0, left / max * travel)) : 0 }
+  }
+
+  // 用户自己动轨道（拖动、滚轮、触摸）时，放弃之前排队的目标下标。
+  function forget() {
+    pending = null
   }
 
   function step(direction: 1 | -1) {
-    if (!rail) return
-    rail.scrollBy({ left: direction * Math.max(rail.clientWidth * 0.82, 260), behavior: 'smooth' })
+    const el = rail
+    if (!el) return
+    stops = readStops()
+    if (stops.length < 2) return
+    const from = pending ?? nearest(stops, el.scrollLeft)
+    const to = Math.min(stops.length - 1, Math.max(0, from + direction))
+    const target = stops[to]
+    // 已经在尽头：位置不再变，但状态要立刻纠正，箭头该隐身就隐身
+    if (to === from && Math.abs(el.scrollLeft - target) <= 2) return
+    pending = to
+    const startLeft = el.scrollLeft
+    clearTimeout(watchdog)
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      el.scrollLeft = target
+      pending = null
+      measure()
+      return
+    }
+    el.scrollTo({ left: target, behavior: 'smooth' })
+    // 兜底：平滑滚动万一被吸附或省电模式吞掉，直接跳到目标，绝不留"点了没反应"的空点击
+    watchdog = window.setTimeout(() => {
+      if (pending !== to) return
+      if (Math.abs(el.scrollLeft - startLeft) < 4 && target !== startLeft) el.scrollLeft = target
+      pending = null
+      measure()
+    }, 320)
   }
 
   function dragThumb(event: PointerEvent) {
     if (!rail || !track) return
     event.preventDefault()
     event.stopPropagation()
+    pending = null
     const rect = track.getBoundingClientRect()
     const startX = event.clientX
     const startLeft = rail.scrollLeft
-    const max = rail.scrollWidth - rail.clientWidth
+    const max = maxScroll(rail)
     const scale = max / Math.max(1, rect.width - thumb.width)
     const move = (moveEvent: PointerEvent) => {
       rail!.scrollLeft = Math.min(max, Math.max(0, startLeft + (moveEvent.clientX - startX) * scale))
@@ -56,6 +119,7 @@
       window.removeEventListener('pointermove', move)
       window.removeEventListener('pointerup', stop)
       window.removeEventListener('pointercancel', stop)
+      measure()
     }
     window.addEventListener('pointermove', move)
     window.addEventListener('pointerup', stop)
@@ -65,19 +129,32 @@
   // 点击滚动条空白处，翻到对应位置。
   function jumpTrack(event: PointerEvent) {
     if (!rail || !track) return
+    pending = null
     const rect = track.getBoundingClientRect()
     const ratio = Math.min(1, Math.max(0, (event.clientX - rect.left - thumb.width / 2) / Math.max(1, rect.width - thumb.width)))
-    rail.scrollTo({ left: ratio * (rail.scrollWidth - rail.clientWidth), behavior: 'smooth' })
+    rail.scrollTo({ left: ratio * maxScroll(rail), behavior: 'smooth' })
   }
 
-  onMount(() => {
+  // 轨道是条件渲染的：goals 从空变成有值时元素才出现，所以监听必须跟着 rail 走，
+  // 不能放在 onMount 里（那时候元素还不存在，监听和 ResizeObserver 会全部丢掉，
+  // 箭头和进度条就停在初始状态——点到底了也不置灰，看着就是"点了没反应"）。
+  $effect(() => {
+    const el = rail
+    if (!el) return
     measure()
     const observer = new ResizeObserver(measure)
-    if (rail) observer.observe(rail)
-    rail?.addEventListener('scroll', measure, { passive: true })
+    observer.observe(el)
+    el.addEventListener('scroll', measure, { passive: true })
+    el.addEventListener('pointerdown', forget, { passive: true })
+    el.addEventListener('wheel', forget, { passive: true })
+    el.addEventListener('touchstart', forget, { passive: true })
     return () => {
       observer.disconnect()
-      rail?.removeEventListener('scroll', measure)
+      el.removeEventListener('scroll', measure)
+      el.removeEventListener('pointerdown', forget)
+      el.removeEventListener('wheel', forget)
+      el.removeEventListener('touchstart', forget)
+      clearTimeout(watchdog)
     }
   })
 
