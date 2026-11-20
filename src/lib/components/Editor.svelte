@@ -18,6 +18,9 @@
 
   onMount(() => {
     dialog.showModal()
+    // 打开就把光标放进第一个可编辑字段：桌面省一次点击，移动端同一次点击里就能拉起输入法。
+    // 跳过 date/select —— 自动聚焦会立刻弹出原生选择器，反而添乱。
+    dialog.querySelector<HTMLElement>('input:not([type="date"]), textarea')?.focus()
     return lockScroll()
   })
 
