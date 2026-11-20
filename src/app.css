@@ -774,12 +774,21 @@ progress::-moz-progress-bar { background: linear-gradient(90deg, var(--primary-f
 
 /* 新建思考：只有一个正文框，没有标题栏也没有按钮，停下来就自动存 */
 .note-composer textarea {
-  display: block; width: 100%; min-height: 180px; padding: 22px 24px;
+  display: block; width: 100%;
+  /* 固定高度：正文写多少都不撑、也不缩，弹窗尺寸全程不变 */
+  height: clamp(280px, 48dvh, 460px); min-height: 240px;
+  padding: 22px 24px; overflow-y: auto;
   border: 0; border-radius: inherit; outline: none; resize: none;
   color: var(--ink); background: transparent; font-size: 15px; line-height: 1.75;
 }
 .note-composer textarea::placeholder { color: var(--faint); }
-.composer-status { margin: 0; padding: 0 24px 16px; color: var(--faint); font-size: 11.5px; transition: opacity .3s; }
+/* 这行常驻：预留一整行的高度，状态文字出现/消失只改透明度，不动布局 */
+.composer-status {
+  min-height: calc(17px + 16px); margin: 0; padding: 0 24px 16px;
+  color: var(--faint); font-size: 11.5px; line-height: 17px;
+  opacity: 0; transition: opacity .3s;
+}
+.composer-status.show { opacity: 1; }
 .composer-status.error { color: var(--negative); }
 
 .empty { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 150px; text-align: center; gap: 10px; padding: 14px 0; }

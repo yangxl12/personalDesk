@@ -95,8 +95,8 @@
 
 <dialog bind:this={dialog} class="note-composer" aria-label={ui.t(start.id ? '编辑思考' : '新建思考')} onclick={backdrop}
   oncancel={event => { event.preventDefault(); void close() }}>
-  <textarea bind:this={input} bind:value={body} oninput={schedule} rows={7}
+  <textarea bind:this={input} bind:value={body} oninput={schedule} rows={12}
     placeholder={ui.t('写点什么…停下就自动保存')}></textarea>
-  <!-- 这行常驻（内容为空也占位），保存状态切换时弹窗高度不会跳 -->
-  <p class="composer-status" class:error={!!error} role={error ? 'alert' : 'status'}>{error || (persisted ? ui.t('已保存') : '')}</p>
+  <!-- 这行常驻（高度已由样式预留），保存状态只在透明度上切换，弹窗不会跳 -->
+  <p class="composer-status" class:error={!!error} class:show={!!error || persisted} role={error ? 'alert' : 'status'}>{error || (persisted ? ui.t('已保存') : '')}</p>
 </dialog>
