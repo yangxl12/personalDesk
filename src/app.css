@@ -549,7 +549,8 @@ body:has(.home-dock) { overflow: hidden; }
     linear-gradient(138deg, var(--sheen), transparent 36%, transparent 68%, var(--sheen));
 }
 .goal-slide:hover::before { opacity: .55; }
-.goal-slide:hover { border-color: var(--primary-tint); box-shadow: var(--shadow-lift); }
+/* 目标卡在 hover/勾选时不做任何视觉反馈：边框不换色、阴影不抬升。
+   勾选任务必须把指针移进卡片，任何 hover 反馈都会被当成"勾选引起的变化"。 */
 .goal-card-head { display: flex; align-items: flex-start; gap: 4px; margin-bottom: 12px; }
 .goal-card-head .goal-board-title { flex: 1; min-width: 0; margin: 0; }
 .goal-card-actions { display: flex; flex: none; gap: 2px; margin: -6px -6px 0 0; }
@@ -603,8 +604,8 @@ body:has(.home-dock) { overflow: hidden; }
   box-shadow: inset 0 1px 0 var(--glass-edge);
 }
 .check-list.dense .check-row input[type="checkbox"], .check-list.dense .check-box { width: 20px; height: 20px; }
-.check-row input[type="checkbox"] { cursor: pointer; transition: background-color .2s, border-color .2s, box-shadow .25s, transform .35s var(--ease); }
-.check-row input[type="checkbox"]:hover { border-color: var(--primary); transform: scale(1.06); }
+.check-row input[type="checkbox"] { cursor: pointer; transition: background-color .2s, border-color .2s; }
+/* 勾选只允许两种变化：勾选框打上勾、任务文字加删除线。hover 不放大、不变色，勾上不加光晕、不弹跳 */
 .check-row input[type="checkbox"]:checked, .check-box.on {
   border-color: transparent;
   background-color: var(--primary-fill);
@@ -614,16 +615,11 @@ body:has(.home-dock) { overflow: hidden; }
   background-size: 74% 74%, 100% 100%;
   background-position: center, center;
   background-repeat: no-repeat, no-repeat;
-  background-position: center, center;
-  background-repeat: no-repeat, no-repeat;
-  box-shadow: 0 5px 14px -5px var(--primary);
-  animation: check-pop .42s var(--ease);
 }
 /* 请求在飞的那几毫秒不要变暗：一闪的观感就是这么来的，禁用手感交给光标 */
 .check-row input[type="checkbox"]:disabled { cursor: default; }
 .check-row .row-actions { opacity: 0; transition: opacity .2s; }
 .check-row:hover .row-actions, .check-row:focus-within .row-actions { opacity: 1; }
-@keyframes check-pop { 0% { transform: scale(.78); } 60% { transform: scale(1.13); } 100% { transform: scale(1); } }
 
 /* --------------------------------------------------------------------------
    财务
