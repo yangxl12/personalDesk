@@ -40,13 +40,13 @@
 
 <div class="shell">
   <div class="workspace">
-    <!-- 顶栏去掉后只留右上角两个悬浮按钮；AI 页的操作已收进它自己的顶栏，这里整条不渲染。 -->
+    <!-- 顶栏去掉后只留右上角两个图标按钮；AI 页的操作已收进它自己的顶栏，这里整条不渲染。 -->
     {#if path !== '/ai'}
       <div class="float-actions">
         {#if path !== '/settings'}
           <a class="button icon-button" href={resolve('settings')} aria-label={ui.t('设置')} title={ui.t('设置')}><Icon name="settings" size={19} /></a>
         {/if}
-        <a class="button icon-button ai-toggle" class:bare={path === '/settings'} href={resolve('ai')} aria-label={ui.t('AI 助手')} title={ui.t('AI 助手')}><Icon name="ai" size={21} /></a>
+        <a class="button icon-button ai-toggle" href={resolve('ai')} aria-label={ui.t('AI 助手')} title={ui.t('AI 助手')}><Icon name="ai" size={21} /></a>
       </div>
     {/if}
     <main id="main" tabindex="-1">{@render children()}</main>

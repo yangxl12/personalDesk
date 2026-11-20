@@ -200,7 +200,7 @@ h2 { font-size: 16px; font-weight: 650; letter-spacing: -.012em; }
 
 .shell {
   /* 顶栏已去掉，改成右上角悬浮按钮；--top-gap 只负责给它留出一行高度 */
-  --top-gap: 60px;
+  --top-gap: 52px;
   --gutter: clamp(20px, 3vw, 46px);
   /* 竖向节奏：悬浮按钮到首卡、卡片与卡片之间共用同一个间距 */
   --stack-gap: 18px;
@@ -217,20 +217,20 @@ h2 { font-size: 16px; font-weight: 650; letter-spacing: -.012em; }
 .workspace:has(.page-bar) #main { padding-top: var(--head-gap); }
 .workspace:has(.page-bar) .float-actions { top: calc(var(--head-gap) + env(safe-area-inset-top, 0px)); }
 
-/* 右上角悬浮按钮：没有背景条，只有按钮自身的玻璃底 */
+/* 右上角悬浮按钮：只留图标本身，不要圆形玻璃底 */
 .float-actions {
   position: fixed; top: calc(var(--stack-gap) + env(safe-area-inset-top, 0px)); right: var(--gutter); z-index: 6;
-  display: flex; align-items: center; gap: 8px;
+  display: flex; align-items: center; gap: 4px;
 }
 .float-actions .icon-button {
-  width: 40px; min-height: 40px; border-radius: 50%;
+  width: 32px; min-height: 32px; padding: 0; border-radius: 9px;
   color: var(--muted);
-  background: var(--glass);
-  border: 1px solid var(--glass-border);
-  backdrop-filter: blur(18px) saturate(165%);
-  -webkit-backdrop-filter: blur(18px) saturate(165%);
-  box-shadow: 0 12px 26px -16px rgba(40, 28, 90, .5), inset 0 1px 0 var(--glass-edge);
+  background: none; border-color: transparent;
+  box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none;
 }
+.float-actions .icon-button:hover { color: var(--primary); background: var(--primary-soft); }
+/* 自带顶栏的页面把图标按钮还原到 40px，跟顶栏那一行的按钮对齐 */
+.workspace:has(.page-bar) .float-actions .icon-button { width: 40px; min-height: 40px; }
 
 #main {
   max-width: 1460px; margin-inline: auto; padding: var(--stack-gap) var(--gutter) 56px;
@@ -302,13 +302,7 @@ h2 { font-size: 16px; font-weight: 650; letter-spacing: -.012em; }
 .icon-button:hover { color: var(--primary); background: var(--primary-soft); }
 .icon-button[data-action^="delete"]:hover { color: var(--negative); background: var(--negative-soft); }
 .float-actions .ai-toggle { position: relative; color: var(--primary); }
-/* 设置页顶栏右侧的 AI 入口：只留图标，不要玻璃圆底 */
-.float-actions .ai-toggle.bare,
-.float-actions .ai-toggle.bare:hover {
-  background: none; border-color: transparent; box-shadow: none;
-  backdrop-filter: none; -webkit-backdrop-filter: none;
-}
-.float-actions .ai-toggle.bare:hover { color: var(--primary-2); }
+.float-actions .ai-toggle:hover { color: var(--primary-2); }
 
 .text-link { color: var(--primary); font-weight: 650; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; min-height: 34px; white-space: nowrap; border: 0; padding: 0; background: none; cursor: pointer; }
 .text-link:hover { text-decoration: underline; text-underline-offset: 3px; }
@@ -1342,8 +1336,9 @@ a.bar-action { color: var(--muted); }
   .goal-slide { flex: 0 0 calc((100% - var(--gap) * 2 - var(--peek)) / 2); }
 }
 @media (max-width: 760px) {
-  .shell { --top-gap: 56px; --gutter: 15px; --stack-gap: 12px; }
-  .float-actions .icon-button { width: 42px; min-height: 42px; }
+  .shell { --top-gap: 48px; --gutter: 15px; --stack-gap: 12px; }
+  .float-actions .icon-button { width: 36px; min-height: 36px; }
+  .workspace:has(.page-bar) .float-actions .icon-button { width: 40px; min-height: 40px; }
   #main { padding-bottom: 40px; }
   /* 手机端整屏面板不让页面自己滚，底部图标再往下压一点 */
   .home-page { padding-bottom: calc(74px + env(safe-area-inset-bottom, 0px)); }
