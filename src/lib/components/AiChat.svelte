@@ -31,8 +31,8 @@
   let before = $state<number | null>(null)
   let runtime = $state<RunSnapshot | null>(null)
   let generating = $derived(!!header?.runId || runtime?.status === 'queued' || runtime?.status === 'running')
-  let textarea: HTMLTextAreaElement
-  let timeline: HTMLDivElement
+  let textarea = $state<HTMLTextAreaElement>()
+  let timeline = $state<HTMLDivElement>()
   let nearBottom = true
   let subscription: { close: () => void } | undefined
   let lastEvent = -1
@@ -108,12 +108,12 @@
       if (id !== ui.chatId || ticket !== loadTicket) return
       header = data.chat
       if (older) {
-        const height = timeline.scrollHeight
-        const top = timeline.scrollTop
+        const list = timeline
+        const top = list ? list.scrollTop - list.scrollHeight : 0
         messages = [...data.items, ...messages]
         before = data.before
         await tick()
-        timeline.scrollTop = top + timeline.scrollHeight - height
+        if (list && list === timeline && ticket === loadTicket) list.scrollTop = top + list.scrollHeight
       } else {
         const current = new Set(data.items.map(item => item.id))
         const retained = data.items[0] && messages.some(item => item.id === data.items[0].id) ?
@@ -407,7 +407,7 @@
           </div>
           <div class="prompt-chips">
             {#each prompts as prompt}
-              <button class="prompt-chip" type="button" onclick={() => { draft = ui.t(prompt); textarea.focus() }}>
+              <button class="prompt-chip" type="button" onclick={() => { draft = ui.t(prompt); textarea?.focus() }}>
                 <span>{ui.t(prompt)}</span>
                 <Icon name="upRight" size={14} />
               </button>

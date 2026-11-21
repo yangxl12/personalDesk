@@ -231,7 +231,7 @@ async function push(config: SyncConfig, payload: SyncPayload, sha: string | null
 
 // 调用点必须已在 write() 事务里：persist 自己不开事务，
 // 快照、合并、落库同属一个事务才能消灭写入丢失窗口。
-async function persist(data: SyncData, tombstones: TombstoneRow[], rev: number, conflicts: number, at: number) {
+async function persist(data: SyncData, tombstones: TombstoneRow[]) {
   await db.goals.clear()
   await db.goals.bulkPut(data.goals)
   await db.items.clear()
@@ -246,14 +246,17 @@ async function persist(data: SyncData, tombstones: TombstoneRow[], rev: number, 
   if (data.preferences) await db.preferences.put({ ...data.preferences, id: 'default' })
   await db.tombstones.clear()
   await db.tombstones.bulkPut(tombstones)
-  await db.meta.put({ key: REV_KEY, value: rev })
-  await db.meta.put({ key: AT_KEY, value: at })
-  await db.meta.put({ key: CONFLICT_KEY, value: conflicts })
+}
+
+async function recordSuccess(rev: number, conflicts: number, at: number) {
+  await db.meta.bulkPut([
+    { key: REV_KEY, value: rev }, { key: AT_KEY, value: at }, { key: CONFLICT_KEY, value: conflicts }
+  ])
 }
 
 // 定时拉取时绝大多数情况两边完全一致，那就什么都不写。
 // 判定用 id + version（墓碑用 key + deleted_at），比逐字段深比较便宜，也够用：
-// 同一个 version 的内容不会不同，不同 version 必定不同。
+// 同版本的内容冲突由 mergePayloads 单独计入 conflicts。
 function sameAsLocal(data: SyncData, tombstones: TombstoneRow[], local: SyncData & { tombstones: TombstoneRow[] }) {
   const rows = (left: { id: string; version: number }[], right: { id: string; version: number }[]) => {
     if (left.length !== right.length) return false
@@ -291,8 +294,8 @@ async function refresh() {
 // 但个人双设备一年不同步再上线的概率，比墓碑表无限膨胀的代价小得多。
 const GRAVE_MS = 365 * 86_400_000
 
-async function gcTombstones() {
-  await db.tombstones.where('deleted_at').below(Date.now() - GRAVE_MS).delete()
+async function gcTombstones(cutoff: number) {
+  await db.tombstones.where('deleted_at').below(cutoff).delete()
 }
 
 async function execute(): Promise<SyncReport> {
@@ -312,32 +315,27 @@ async function execute(): Promise<SyncReport> {
       const outcome = await write(async () => {
         const local = await snapshot()
         const plan = mergePayloads(remote.payload, local)
-        // 定时拉取大多撞在这个分支：两边一样，只更新「上次同步时间」，不写库也不刷新界面。
-        // conflicts 不为 0 说明有同 version 不同内容的碰撞，哪怕本地没赢也可能要吸收远端那份。
-        if (plan.adopted === 0 && plan.conflicts === 0 && sameAsLocal(plan.data, plan.tombstones, local)) {
-          await db.meta.put({ key: AT_KEY, value: at })
-          return null
-        }
+        const changed = plan.conflicts > 0 || !sameAsLocal(plan.data, plan.tombstones, local)
+        if (changed) await persist(plan.data, plan.tombstones)
         const rev = (remote.payload?.rev ?? 0) + (plan.adopted > 0 ? 1 : 0)
-        await persist(plan.data, plan.tombstones, rev, plan.conflicts, at)
-        return { plan, rev }
+        if (plan.adopted === 0) await recordSuccess(rev, plan.conflicts, at)
+        return { plan, rev, changed }
       })
-      if (!outcome) {
-        return { rev: remote.payload?.rev ?? 0, pushed: false, conflicts: 0, at }
-      }
-
-      refreshed = true
+      refreshed ||= outcome.changed
       if (outcome.plan.adopted === 0) {
         return { rev: outcome.rev, pushed: false, conflicts: outcome.plan.conflicts, at }
       }
 
+      const cutoff = at - GRAVE_MS
       const payload: SyncPayload = {
         format: FORMAT, rev: outcome.rev, deviceId: deviceId(),
-        updatedAt: at, data: outcome.plan.data, tombstones: outcome.plan.tombstones
+        updatedAt: at, data: outcome.plan.data,
+        tombstones: outcome.plan.tombstones.filter(row => row.deleted_at >= cutoff)
       }
       try {
         await push(config, payload, remote.sha)
-        await gcTombstones()
+        await recordSuccess(outcome.rev, outcome.plan.conflicts, at)
+        await gcTombstones(cutoff)
         return { rev: outcome.rev, pushed: true, conflicts: outcome.plan.conflicts, at }
       } catch (failure) {
         // sha 对不上说明另一端在这几秒里推过，重新拉一次再合并，最多三轮。

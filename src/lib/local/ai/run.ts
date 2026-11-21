@@ -5,7 +5,8 @@ import { domains, type RunSnapshot, type SendInput, type Source, type RunStatus 
 import { decimal, id, month, today } from '#lib/contracts/workspace'
 import { systemPrompt } from '#lib/ai/prompts/v1'
 import { db } from '../db'
-import { activeConfiguration, model, type Configuration } from './model'
+import { activeConfiguration, type Configuration } from './model'
+import { model } from './provider'
 import * as registry from './runtime'
 import type { EventPayload, Listener } from './runtime'
 import {

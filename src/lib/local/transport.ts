@@ -4,9 +4,8 @@ import { sendInput } from '#lib/contracts/ai'
 import { toRequestError } from '#lib/errors'
 import {
   deleteConfiguration, deleteModelInput, modelSettings, modelStatus, saveConfiguration, selectConfiguration,
-  selectionInput, testConfiguration, testModel
+  selectionInput, testConfiguration
 } from './ai/model'
-import * as ai from './ai/run'
 import { abortConversation } from './ai/runtime'
 import { chat, chats, decide, deleteChat, messages as chatMessages, proposal } from './store/chats'
 import {
@@ -110,6 +109,7 @@ async function route<T>(method: string, segments: string[], query: URLSearchPara
       if (!second && method === 'PATCH') return ok<T>(await saveConfiguration(body))
       if (second === 'active' && method === 'PATCH') return ok<T>(await selectConfiguration(parse(selectionInput, body)))
       if (second === 'test' && method === 'POST') {
+        const { testModel } = await import('./ai/provider')
         await testModel(await testConfiguration(body))
         return ok<T>(null)
       }
@@ -120,6 +120,7 @@ async function route<T>(method: string, segments: string[], query: URLSearchPara
       throw notFound()
     }
     if (first === 'runs') {
+      const ai = await import('./ai/run')
       if (!second && method === 'POST') {
         const { revisions: changed, created: _created, ...receipt } = await ai.start(parse(sendInput, body))
         return { data: receipt as T, revisions: changed }

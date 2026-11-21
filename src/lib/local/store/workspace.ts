@@ -207,7 +207,7 @@ export async function dashboard(): Promise<Dashboard> {
       .sort((left, right) => left.created_at - right.created_at || (left.id < right.id ? -1 : 1))
     return { tasks: picked.map(brief), total: goal.total_tasks }
   }
-  const notes = (await db.notes.toArray()).sort(descByTime<NoteRow>(row => row.updated_at))
+  const notes = await db.notes.orderBy('updated_at').reverse().toArray()
   const [start, end] = bounds(month)
   const monthRows = await db.transactions.where('occurred_on').between(start, end, true, false).toArray()
   return {

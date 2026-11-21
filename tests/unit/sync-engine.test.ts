@@ -88,12 +88,50 @@ describe('sync engine', () => {
     expect(calls).toEqual(['GET'])
   })
 
+  it('absorbs different remote content with an identical timestamp and version', async () => {
+    const row = note('a', 1, 100)
+    await db.notes.put(row)
+    await runSync()
+    await db.notes.put({ ...row, title: 'local edit' })
+    expect(await runSync()).toMatchObject({ pushed: false, conflicts: 1 })
+    expect(await db.notes.get('a')).toEqual(row)
+    await runSync()
+    expect((await syncStatus()).conflicts).toBe(0)
+  })
+
+  it('uploads local edits without rewriting local business tables', async () => {
+    await db.notes.put(note('a', 1, 100))
+    const clear = vi.spyOn(db.notes, 'clear')
+    try {
+      expect((await runSync()).pushed).toBe(true)
+      expect(clear).not.toHaveBeenCalled()
+    } finally {
+      clear.mockRestore()
+    }
+  })
+
+  it('preserves the last successful status when a push fails', async () => {
+    await db.notes.put(note('a', 1, 100))
+    await runSync()
+    const previous = await syncStatus()
+    const original = globalThis.fetch
+    try {
+      vi.stubGlobal('fetch', (url: string, init: RequestInit) => init.method === 'PUT'
+        ? Promise.resolve(new Response(null, { status: 503 })) : original(url, init))
+      await db.notes.put(note('a', 2, 200))
+      await expect(runSync()).rejects.toThrow('503')
+      expect(await syncStatus()).toEqual(previous)
+    } finally {
+      vi.stubGlobal('fetch', original)
+    }
+  })
+
   it('keeps a deleted row deleted after a round trip', async () => {
     await db.notes.put(note('a', 1, 100))
     await runSync()
 
     await db.notes.delete('a')
-    await db.tombstones.put({ key: 'notes:a', table: 'notes', record_id: 'a', deleted_at: 200 })
+    await db.tombstones.put({ key: 'notes:a', table: 'notes', record_id: 'a', deleted_at: Date.now() })
     await runSync()
 
     await db.notes.clear()
@@ -108,7 +146,7 @@ describe('sync engine', () => {
     await runSync()
 
     await db.notes.delete('a')
-    await db.tombstones.put({ key: 'notes:a', table: 'notes', record_id: 'a', deleted_at: 200 })
+    await db.tombstones.put({ key: 'notes:a', table: 'notes', record_id: 'a', deleted_at: Date.now() })
     await runSync()
 
     await db.notes.put(note('a', 1, 100))
@@ -140,6 +178,7 @@ describe('sync engine', () => {
       { key: 'notes:old', table: 'notes', record_id: 'old', deleted_at: now - year - 86_400_000 },
       { key: 'notes:fresh', table: 'notes', record_id: 'fresh', deleted_at: now - 1000 }
     ])
+    await runSync()
     await runSync()
     expect((await db.tombstones.toArray()).map(row => row.key)).toEqual(['notes:fresh'])
   })

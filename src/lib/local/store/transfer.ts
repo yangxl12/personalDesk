@@ -3,34 +3,35 @@ import { db } from '../db'
 import { write } from '../tx'
 import { bump, fault } from './workspace'
 import type { ChatRow, GoalRow, ItemRow, MessageRow, NoteRow, TaskRow, TransactionRow } from '../db'
-import type { Preferences, Savings } from '#lib/contracts/workspace'
+import { inputs, type Preferences, type Savings } from '#lib/contracts/workspace'
 
+const limitedText = (max: number) => z.string().refine(value => [...value].length <= max)
 const amount = z.number().int()
 const stamp = z.number().int()
 const tone = z.enum(['violet', 'mint', 'amber'])
 const state = z.enum(['queued', 'running', 'completed', 'failed', 'cancelled', 'interrupted'])
 
 const goal = z.object({
-  id: z.uuid(), title: z.string().max(120), description: z.string().max(4000), tone,
+  id: z.uuid(), title: limitedText(120), description: limitedText(4000), tone,
   total_tasks: z.number().int().nonnegative(), done_tasks: z.number().int().nonnegative(),
   created_at: stamp.optional(), updated_at: stamp, version: z.number().int().positive()
 })
 const item = z.object({
-  id: z.uuid(), goal_id: z.uuid(), title: z.string().max(120),
+  id: z.uuid(), goal_id: z.uuid(), title: limitedText(120),
   total_tasks: z.number().int().nonnegative(), done_tasks: z.number().int().nonnegative(),
   created_at: stamp, updated_at: stamp.optional(), version: z.number().int().positive()
 })
 const task = z.object({
-  id: z.uuid(), item_id: z.uuid(), title: z.string().max(120), done: z.union([z.literal(0), z.literal(1)]),
+  id: z.uuid(), item_id: z.uuid(), title: limitedText(120), done: z.union([z.literal(0), z.literal(1)]),
   completed_at: stamp.nullable(), created_at: stamp, updated_at: stamp.optional(), version: z.number().int().positive()
 })
 const note = z.object({
-  id: z.uuid(), title: z.string().max(120), body: z.string().min(1), summary: z.string(),
+  id: z.uuid(), title: limitedText(120), body: z.string().min(1), summary: z.string(),
   created_at: stamp, updated_at: stamp, version: z.number().int().positive()
 })
 const transaction = z.object({
   id: z.uuid(), direction: z.enum(['income', 'expense']), amount_cents: amount,
-  occurred_on: z.string(), note: z.string().max(500),
+  occurred_on: z.string(), note: limitedText(500),
   // 同步冲突裁决要用；老备份没有这个字段，导入后按 0 兜底参与合并。
   updated_at: stamp.optional(), version: z.number().int().positive()
 })
@@ -39,7 +40,7 @@ const saving = z.object({
 })
 const preference = z.object({
   theme: z.enum(['system', 'light', 'dark']), language: z.enum(['zh-CN', 'en']),
-  timezone: z.string().min(1).max(100), ai_goals: z.number().int().min(0).max(1),
+  timezone: inputs.preferencesUpdate.shape.timezone, ai_goals: z.number().int().min(0).max(1),
   ai_notes: z.number().int().min(0).max(1), ai_finance: z.number().int().min(0).max(1),
   ai_version: z.number().int().nonnegative(), version: z.number().int().positive()
 })

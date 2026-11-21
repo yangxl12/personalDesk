@@ -25,6 +25,12 @@ type Stamped = { created_at?: number; updated_at?: number }
 
 const stampOf = (row: Stamped) => row.updated_at ?? row.created_at ?? 0
 
+// 同步行只含标量，按字段比较可兼容旧备份的可选字段和不同的属性顺序。
+function sameFields<T extends object>(left: T, right: T) {
+  const keys = Object.keys(left) as (keyof T)[]
+  return keys.length === Object.keys(right).length && keys.every(key => left[key] === right[key])
+}
+
 // 行级合并：先看 version，version 打平再看时间戳，都打平就保留远端那份。
 // adopted 表示「本地这条胜出，需要推到云端」；为 0 说明远端已是超集，可以省掉一次 PUT。
 function mergeRows<T extends { id: string; version: number } & Stamped>(remote: T[], local: T[]) {
@@ -51,16 +57,12 @@ function mergeRows<T extends { id: string; version: number } & Stamped>(remote: 
       merged.set(row.id, row)
       adopted++
       conflicts++
-    } else if (mine < theirs) {
+    } else if (mine < theirs || !sameFields(row, other)) {
       conflicts++
     }
   }
   return { rows: [...merged.values()], adopted, conflicts }
 }
-
-// 单行没有时间戳可比，version 打平就退化成比内容。字段序在两端可能不同（JSON 解析
-// 与对象字面量的顺序不一致），先把 key 排序再序列化，避免把同一份数据误判成冲突。
-const canon = (value: object) => JSON.stringify(value, Object.keys(value).sort())
 
 function mergeSingle<T extends { version: number }>(remote: T | null, local: T | null) {
   if (!local) return { value: remote, adopted: false, conflict: false }
@@ -68,7 +70,7 @@ function mergeSingle<T extends { version: number }>(remote: T | null, local: T |
   if (local.version === remote.version) {
     // 内容一致是常态（轮询两端都吸收过同一份），不算冲突；内容不同说明两端各自改到了
     // 同一个版本号，云端先推的那份算赢，本地吸收它并记一笔冲突让用户知情。
-    const same = canon(local) === canon(remote)
+    const same = sameFields(local, remote)
     return { value: same ? local : remote, adopted: false, conflict: !same }
   }
   return local.version > remote.version
